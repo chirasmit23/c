@@ -106,7 +106,7 @@ def download_video(post_url, quality):
         "format": video_format,
         "outtmpl": video_path,
         "merge_output_format": "mp4",
-        "quiet": True,
+        "quiet": False,
     }
 
     try:
