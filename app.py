@@ -27,18 +27,28 @@ DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
 def download_instagram_post(post_url, username, password):
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")
+
+    #  Set the correct Chrome binary path
+    options.binary_location = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"  
+
+    #  Initialize Chrome driver with proper configurations
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
     try:
         driver.get("https://www.instagram.com/accounts/login/")
         time.sleep(5)
+
+        #  Enter login credentials
         driver.find_element(By.NAME, "username").send_keys(username)
         driver.find_element(By.NAME, "password").send_keys(password)
         driver.find_element(By.XPATH, "//button[@type='submit']").click()
         time.sleep(5)
 
+        #  Open the post URL
         driver.get(post_url)
         time.sleep(5)
+
+        #  Try extracting image/video URL
         try:
             media_url = driver.find_element(By.TAG_NAME, "img").get_attribute("src")
         except:
@@ -47,6 +57,7 @@ def download_instagram_post(post_url, username, password):
         if not media_url:
             raise ValueError("Failed to extract media URL")
 
+        #  Download media file
         parsed_url = urlparse(media_url)
         filename = os.path.basename(parsed_url.path)
         filepath = os.path.join(DOWNLOADS_FOLDER, filename)
@@ -128,5 +139,5 @@ def video_downloader():
     return render_template("index.html")
 
 if __name__ == "__main__":
-    port=int(os.environ.get("PORT",10000))
-    app.run(host="0.0.0.0",port=port)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
