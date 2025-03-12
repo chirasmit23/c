@@ -10,6 +10,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv  
 from urllib.parse import urlparse
+from bs4 import BeautifulSoup
 
 # Initialize Flask App
 app = Flask(__name__, template_folder="templates")
@@ -19,37 +20,34 @@ load_dotenv()
 USERNAME = os.getenv("INSTA_USERNAME")
 PASSWORD = os.getenv("INSTA_PASSWORD")
 
+if not USERNAME or not PASSWORD:
+    raise ValueError("Instagram username or password not set in .env file")
+
 DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
 
+#  Function to download Instagram reels/videos WITHOUT login
+def scrape_instagram_reel(post_url):
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(post_url, headers=headers)
 
-def download_instagram_media(post_url):
-    """
-    Downloads Instagram Reels/Videos without login.
-    Downloads Photos with login.
-    """
-    try:
-        # Fetch metadata using yt-dlp (works for public videos)
-        ydl_opts = {"quiet": True}
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(post_url, download=False)
-        
-        # Check if it's a video or an image
-        if "video" in info.get("formats", [{}])[0]["ext"]:
-            print("Detected: Instagram Video/Reel (No Login Required)")
-            return download_video(post_url, "best")
-        else:
-            print("Detected: Instagram Photo (Login Required)")
-            return download_instagram_photo(post_url, USERNAME, PASSWORD)
-    
-    except Exception as e:
-        print(f"Instagram Download Error: {e}")
-        return None
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, "html.parser")
+        video_tag = soup.find("meta", {"property": "og:video"})
 
+        if video_tag:
+            video_url = video_tag["content"]
+            video_content = requests.get(video_url).content
 
-def download_instagram_photo(post_url, username, password):
-    """
-    Logs into Instagram to download photo posts (Login Required).
-    """
+            file_path = os.path.join(DOWNLOADS_FOLDER, f"reel_{uuid.uuid4().hex}.mp4")
+            with open(file_path, "wb") as file:
+                file.write(video_content)
+
+            return file_path
+
+    return None
+
+#  Function to download Instagram photo posts (LOGIN required)
+def download_instagram_post(post_url, username, password):
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
@@ -57,7 +55,6 @@ def download_instagram_photo(post_url, username, password):
     try:
         driver.get("https://www.instagram.com/accounts/login/")
         time.sleep(5)
-        
         driver.find_element(By.NAME, "username").send_keys(username)
         driver.find_element(By.NAME, "password").send_keys(password)
         driver.find_element(By.XPATH, "//button[@type='submit']").click()
@@ -65,10 +62,14 @@ def download_instagram_photo(post_url, username, password):
 
         driver.get(post_url)
         time.sleep(5)
+        media_url = None
+        try:
+            media_url = driver.find_element(By.TAG_NAME, "img").get_attribute("src")  # Only photos
+        except:
+            pass
 
-        media_url = driver.find_element(By.TAG_NAME, "img").get_attribute("src")
         if not media_url:
-            raise ValueError("Failed to extract media URL")
+            raise ValueError("Failed to extract photo URL (only photos can be downloaded with login).")
 
         parsed_url = urlparse(media_url)
         filename = os.path.basename(parsed_url.path)
@@ -80,17 +81,14 @@ def download_instagram_photo(post_url, username, password):
         return filepath
 
     except Exception as e:
-        print(f"Error downloading Instagram photo: {e}")
+        print(f"Error downloading Instagram post: {e}")
         return None
 
     finally:
         driver.quit()
 
-
+#  Function to download YouTube or Instagram videos
 def download_video(post_url, quality):
-    """
-    Downloads YouTube or Instagram videos using yt-dlp.
-    """
     unique_filename = f"downloaded_video_{uuid.uuid4().hex}.mp4"
     video_path = os.path.join(DOWNLOADS_FOLDER, unique_filename)
 
@@ -106,7 +104,8 @@ def download_video(post_url, quality):
         "format": video_format,
         "outtmpl": video_path,
         "merge_output_format": "mp4",
-        "quiet": False,
+        "quiet": True,
+        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}]
     }
 
     try:
@@ -117,39 +116,45 @@ def download_video(post_url, quality):
         print(f"Download Error: {e}")
         return None
 
-
 # Flask Routes
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html")     
+    return render_template("index.html")
 
+#  Instagram Downloader Route (Smart detection: Reels/videos vs. Photos)
 @app.route("/instagram", methods=["POST"])
 def instagram_downloader():
     post_url = request.form["url"]
-    filepath = download_instagram_media(post_url)
+
+    # Try downloading the video without login
+    filepath = scrape_instagram_reel(post_url)
 
     if filepath:
         return send_file(filepath, as_attachment=True)
-    else:
-        return "Error: Instagram post could not be downloaded.", 500
+    
+    # If not a video, require login for photo download
+    username = request.form["username"]
+    password = request.form["password"]
+    filepath = download_instagram_post(post_url, username, password)
 
+    if filepath:
+        return send_file(filepath, as_attachment=True)
+    
+    return "Error: Instagram content could not be downloaded.", 500
+
+#  YouTube/Video Downloader Route
 @app.route("/video", methods=["POST"])
 def video_downloader():
     video_url = request.form.get("video_url")
     quality = request.form.get("quality")
-    
-    print(f"Received video URL: {video_url}")
-    print(f"Selected Quality: {quality}")
 
     if video_url:
         file_path = download_video(video_url, quality)
         if file_path:
             return send_file(file_path, as_attachment=True)
-        else:
-            print("Download failed")
-            return "Error: Video could not be downloaded.", 500
-    return render_template("index.html")
+        return "Error: Video could not be downloaded.", 500
 
+    return render_template("index.html")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
