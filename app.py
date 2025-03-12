@@ -29,8 +29,7 @@ def download_instagram_post(post_url, username, password):
     options.add_argument("--headless")
 
     #  Set the correct Chrome binary path
-    options.binary_location = "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Google Chrome.lnk"
-
+    options.binary_location ="C:\Program Files\Google\Chrome\Application\chrome.exe"
     #  Initialize Chrome driver with proper configurations
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
