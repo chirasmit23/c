@@ -11,24 +11,21 @@ from playwright.sync_api import sync_playwright
 # Initialize Flask App
 app = Flask(__name__, template_folder="templates")
 
-# Load Instagram Credentials Securely
+# Load Environment Variables
 load_dotenv()
 USERNAME = os.getenv("INSTA_USERNAME")
 PASSWORD = os.getenv("INSTA_PASSWORD")
-
-if not USERNAME or not PASSWORD:
-    raise ValueError("Instagram username or password not set in .env file")
 
 DOWNLOADS_FOLDER = "downloads"
 os.makedirs(DOWNLOADS_FOLDER, exist_ok=True)
 
 def download_instagram_post(post_url, username, password):
+    """Downloads Instagram post requiring login."""
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
 
         try:
-            # Login to Instagram
             page.goto("https://www.instagram.com/accounts/login/")
             time.sleep(5)
             page.fill("input[name='username']", username)
@@ -36,20 +33,15 @@ def download_instagram_post(post_url, username, password):
             page.click("button[type='submit']")
             time.sleep(5)
 
-            # Open the post URL
             page.goto(post_url)
             time.sleep(5)
 
-            # Extract media URL
             media_url = page.locator("video").get_attribute("src") or page.locator("img").get_attribute("src")
             if not media_url:
                 raise ValueError("Failed to extract media URL")
 
-            # Download media
-            parsed_url = urlparse(media_url)
-            filename = os.path.basename(parsed_url.path)
+            filename = os.path.basename(urlparse(media_url).path)
             filepath = os.path.join(DOWNLOADS_FOLDER, filename)
-
             with open(filepath, "wb") as file:
                 file.write(requests.get(media_url).content)
 
@@ -61,6 +53,7 @@ def download_instagram_post(post_url, username, password):
             browser.close()
 
 def download_video(post_url, quality):
+    """Downloads Instagram reels and YouTube videos without login."""
     unique_filename = f"video_{uuid.uuid4().hex}.mp4"
     video_path = os.path.join(DOWNLOADS_FOLDER, unique_filename)
     
@@ -91,10 +84,11 @@ def download_video(post_url, quality):
 # Flask Routes
 @app.route("/")
 def index():
-    return render_template("index.html")     
+    return render_template("index.html")
 
 @app.route("/instagram", methods=["POST"])
 def instagram_downloader():
+    """Handles Instagram post downloads requiring login."""
     username = request.form["username"]
     password = request.form["password"]
     post_url = request.form["url"]
@@ -107,6 +101,7 @@ def instagram_downloader():
 
 @app.route("/video", methods=["POST"])
 def video_downloader():
+    """Handles Instagram reels and YouTube video downloads without login."""
     video_url = request.form.get("video_url")
     quality = request.form.get("quality")
     
