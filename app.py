@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, send_file
+Flask, render_template, request, send_file
 import yt_dlp
 import os
 import uuid
+import time
 import requests
 from urllib.parse import urlparse
 from dotenv import load_dotenv  
@@ -23,30 +24,25 @@ DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
 def download_instagram_post(post_url, username, password):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        context = browser.new_context()
-        page = context.new_page()
+        page = browser.new_page()
 
         try:
             # Open Instagram login page
-            page.goto("https://www.instagram.com/accounts/login/", timeout=60000)
-            page.wait_for_selector("input[name='username']", timeout=10000)
+            page.goto("https://www.instagram.com/accounts/login/")
+            time.sleep(5)
 
             # Enter login credentials
             page.fill("input[name='username']", username)
             page.fill("input[name='password']", password)
             page.click("button[type='submit']")
-            page.wait_for_timeout(5000)  # Allow time for login
+            time.sleep(5)
 
-            # Open the Instagram post URL
-            page.goto(post_url, timeout=60000)
-            page.wait_for_timeout(3000)  # Allow media to load
+            # Open the post URL
+            page.goto(post_url)
+            time.sleep(5)
 
-            # Extract media URL (Image or Video)
-            media_url = None
-            if page.locator("video").count() > 0:
-                media_url = page.locator("video").first.get_attribute("src")
-            elif page.locator("img").count() > 0:
-                media_url = page.locator("img").first.get_attribute("src")
+            # Extract media URL
+            media_url = page.locator("img").get_attribute("src") or page.locator("video").get_attribute("src")
 
             if not media_url:
                 raise ValueError("Failed to extract media URL")
