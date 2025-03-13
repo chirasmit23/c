@@ -22,28 +22,34 @@ USERNAME = os.getenv("INSTA_USERNAME")
 PASSWORD = os.getenv("INSTA_PASSWORD")
 
 DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
+os.makedirs(DOWNLOADS_FOLDER, exist_ok=True)  # Ensure download folder exists
 
 # ======= INSTAGRAM DOWNLOAD (PLAYWRIGHT) =======
 def download_instagram_post_playwright(post_url):
+    """Uses Playwright to extract Instagram video/image URL and download it."""
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)  # Run browser in the background
+        browser = p.chromium.launch(headless=True)
         page = browser.new_page()
 
         # Mobile user-agent to bypass login
         page.set_extra_http_headers({
-           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
         })
 
         page.goto(post_url, timeout=60000)
-        time.sleep(3)  # Wait for content to load
+        time.sleep(random.randint(5, 10))  # Randomized delay to reduce detection
 
         try:
             media_url = page.locator("video").get_attribute("src")  # Try video first
+            if not media_url:
+                media_url = page.locator("img").get_attribute("src")  # If not, try image
         except:
-            media_url = page.locator("img").get_attribute("src")  # If not, try image
+            media_url = None
+
+        browser.close()
 
         if not media_url:
-            raise ValueError("Failed to extract media URL")
+            return None  # Media extraction failed
 
         parsed_url = urlparse(media_url)
         filename = os.path.basename(parsed_url.path)
@@ -52,11 +58,11 @@ def download_instagram_post_playwright(post_url):
         with open(filepath, "wb") as file:
             file.write(requests.get(media_url).content)
 
-        browser.close()
         return filepath
 
 # ======= INSTAGRAM DOWNLOAD (SELENIUM - FALLBACK) =======
 def download_instagram_post_selenium(post_url, username, password):
+    """Uses Selenium to log in and extract Instagram video/image URL."""
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")  # Run in background
     options.add_argument("--no-sandbox")
@@ -77,11 +83,15 @@ def download_instagram_post_selenium(post_url, username, password):
 
         try:
             media_url = driver.find_element(By.TAG_NAME, "video").get_attribute("src")
+            if not media_url:
+                media_url = driver.find_element(By.TAG_NAME, "img").get_attribute("src")
         except:
-            media_url = driver.find_element(By.TAG_NAME, "img").get_attribute("src")
+            media_url = None
+
+        driver.quit()
 
         if not media_url:
-            raise ValueError("Failed to extract media URL")
+            return None  # Media extraction failed
 
         parsed_url = urlparse(media_url)
         filename = os.path.basename(parsed_url.path)
@@ -94,48 +104,16 @@ def download_instagram_post_selenium(post_url, username, password):
 
     except Exception as e:
         print(f"Error downloading Instagram post: {e}")
+        driver.quit()
         return None
 
-    finally:
-        driver.quit()
-
 # ======= YOUTUBE & INSTAGRAM REELS DOWNLOAD (yt-dlp) =======
-def download_instagram_post(post_url):
-    """Downloads Instagram reels/posts using Playwright to bypass login requirements."""
-    
-    # Add delay to prevent rate limiting
-    time.sleep(random.randint(10, 20))  # ⏳ Delay before request
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-
-        page.goto(post_url, timeout=60000)
-        time.sleep(5)  # Give page time to load
-
-        try:
-            media_url = page.locator("img").get_attribute("src")  # Try to get image
-        except:
-            media_url = page.locator("video").get_attribute("src")  # If image fails, try video
-
-        browser.close()
-
-        if media_url:
-            response = requests.get(media_url)
-            filename = f"{uuid.uuid4().hex}.mp4"
-            filepath = os.path.join(os.path.expanduser("~"), "Downloads", filename)
-
-            with open(filepath, "wb") as file:
-                file.write(response.content)
-
-            return filepath
-        else:
-            return None
- def download_video(post_url, quality="best"):
+def download_video(post_url, quality="best"):
+    """Downloads videos using yt-dlp for YouTube and Instagram reels."""
     time.sleep(random.randint(10, 20))  # Delay to avoid rate limits
 
     unique_filename = f"video_{uuid.uuid4().hex}.mp4"
-    video_path = os.path.join(os.getcwd(), unique_filename)
+    video_path = os.path.join(DOWNLOADS_FOLDER, unique_filename)
 
     quality_formats = {
         "1080": "bestvideo[height<=1080]+bestaudio/best",
@@ -162,7 +140,8 @@ def download_instagram_post(post_url):
         return video_path
     except Exception as e:
         print(f"Download Error: {e}")
-        return None           
+        return None
+
 # ======= FLASK ROUTES =======
 @app.route("/", methods=["GET"])
 def index():
@@ -170,6 +149,7 @@ def index():
 
 @app.route("/instagram", methods=["GET", "POST"])
 def instagram_downloader():
+    """Handles Instagram downloads."""
     if request.method == "POST":
         post_url = request.form["url"]
 
@@ -187,8 +167,9 @@ def instagram_downloader():
 
 @app.route("/video", methods=["POST"])
 def video_downloader():
+    """Handles YouTube & Instagram reels downloads using yt-dlp."""
     video_url = request.form.get("video_url")
-    quality = request.form.get("quality")
+    quality = request.form.get("quality", "best")
 
     if video_url:
         file_path = download_video(video_url, quality)
