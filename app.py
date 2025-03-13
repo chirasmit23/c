@@ -8,8 +8,9 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-from dotenv import load_dotenv  
+from dotenv import load_dotenv
 from urllib.parse import urlparse
+from playwright.sync_api import sync_playwright  # Playwright added
 
 # Initialize Flask App
 app = Flask(__name__, template_folder="templates")
@@ -19,20 +20,49 @@ load_dotenv()
 USERNAME = os.getenv("INSTA_USERNAME")
 PASSWORD = os.getenv("INSTA_PASSWORD")
 
-if not USERNAME or not PASSWORD:
-    raise ValueError("Instagram username or password not set in .env file")
-
 DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
 
-def setup_chrome():
+# ======= INSTAGRAM DOWNLOAD (PLAYWRIGHT) =======
+def download_instagram_post_playwright(post_url):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)  # Run browser in the background
+        page = browser.new_page()
+
+        # Mobile user-agent to bypass login
+        page.set_extra_http_headers({
+            "User-Agent": "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36"
+        })
+
+        page.goto(post_url, timeout=60000)
+        time.sleep(3)  # Wait for content to load
+
+        try:
+            media_url = page.locator("video").get_attribute("src")  # Try video first
+        except:
+            media_url = page.locator("img").get_attribute("src")  # If not, try image
+
+        if not media_url:
+            raise ValueError("Failed to extract media URL")
+
+        parsed_url = urlparse(media_url)
+        filename = os.path.basename(parsed_url.path)
+        filepath = os.path.join(DOWNLOADS_FOLDER, filename)
+
+        with open(filepath, "wb") as file:
+            file.write(requests.get(media_url).content)
+
+        browser.close()
+        return filepath
+
+# ======= INSTAGRAM DOWNLOAD (SELENIUM - FALLBACK) =======
+def download_instagram_post_selenium(post_url, username, password):
     options = webdriver.ChromeOptions()
+    options.add_argument("--headless")  # Run in background
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
-def download_instagram_post(post_url, username, password):
-    driver = setup_chrome()
-    
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
     try:
         driver.get("https://www.instagram.com/accounts/login/")
         time.sleep(5)
@@ -43,11 +73,11 @@ def download_instagram_post(post_url, username, password):
 
         driver.get(post_url)
         time.sleep(5)
-        
+
         try:
-            media_url = driver.find_element(By.TAG_NAME, "img").get_attribute("src")
-        except:
             media_url = driver.find_element(By.TAG_NAME, "video").get_attribute("src")
+        except:
+            media_url = driver.find_element(By.TAG_NAME, "img").get_attribute("src")
 
         if not media_url:
             raise ValueError("Failed to extract media URL")
@@ -68,6 +98,7 @@ def download_instagram_post(post_url, username, password):
     finally:
         driver.quit()
 
+# ======= YOUTUBE & INSTAGRAM REELS DOWNLOAD (yt-dlp) =======
 def download_video(post_url, quality):
     unique_filename = f"downloaded_video_{uuid.uuid4().hex}.mp4"
     video_path = os.path.join(DOWNLOADS_FOLDER, unique_filename)
@@ -84,7 +115,8 @@ def download_video(post_url, quality):
         "format": video_format,
         "outtmpl": video_path,
         "merge_output_format": "mp4",
-        "quiet": True,
+        "quiet": False,
+        "user_agent": "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36",
         "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}]
     }
 
@@ -96,42 +128,42 @@ def download_video(post_url, quality):
         print(f"Download Error: {e}")
         return None
 
-# Flask Routes
+# ======= FLASK ROUTES =======
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html")     
+    return render_template("index.html")
 
 @app.route("/instagram", methods=["GET", "POST"])
 def instagram_downloader():
     if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
         post_url = request.form["url"]
 
-        filepath = download_instagram_post(post_url, username, password)
+        # Try Playwright first, then Selenium if it fails
+        filepath = download_instagram_post_playwright(post_url)
+        if not filepath and USERNAME and PASSWORD:
+            filepath = download_instagram_post_selenium(post_url, USERNAME, PASSWORD)
+
         if filepath:
             return send_file(filepath, as_attachment=True)
         else:
             return "Error: Instagram post could not be downloaded.", 500
+
     return render_template("instagram_downloader.html")
 
 @app.route("/video", methods=["POST"])
 def video_downloader():
     video_url = request.form.get("video_url")
     quality = request.form.get("quality")
-    
-    print(f"Received video URL: {video_url}")
-    print(f"Selected Quality: {quality}")
 
     if video_url:
         file_path = download_video(video_url, quality)
         if file_path:
             return send_file(file_path, as_attachment=True)
         else:
-            print("Download failed")
             return "Error: Video could not be downloaded.", 500
+
     return render_template("index.html")
 
 if __name__ == "__main__":
-    port=int(os.environ.get("PORT",10000))
-    app.run(host="0.0.0.0",port=port)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
