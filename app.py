@@ -1,16 +1,12 @@
 from flask import Flask, render_template, request, send_file
 import yt_dlp
-import shutil
 import os
 import uuid
 import time
-import platform
 import requests
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from dotenv import load_dotenv  
 from urllib.parse import urlparse
+from dotenv import load_dotenv  
+from playwright.sync_api import sync_playwright
 
 # Initialize Flask App
 app = Flask(__name__, template_folder="templates")
@@ -26,60 +22,45 @@ if not USERNAME or not PASSWORD:
 DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
 
 def download_instagram_post(post_url, username, password):
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Run in headless mode
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    
-    # Set the correct Chrome binary path for Render
-    options.binary_location = "/usr/bin/google-chrome-stable"
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
 
-    # Set the correct ChromeDriver path
-    service = Service("/usr/bin/chromedriver")
-    
-    driver = webdriver.Chrome(service=service, options=options)
-
-    try:
-        driver.get("https://www.instagram.com/accounts/login/")
-        time.sleep(5)
-
-        # Enter login credentials
-        driver.find_element(By.NAME, "username").send_keys(username)
-        driver.find_element(By.NAME, "password").send_keys(password)
-        driver.find_element(By.XPATH, "//button[@type='submit']").click()
-        time.sleep(5)
-
-        # Open the post URL
-        driver.get(post_url)
-        time.sleep(5)
-
-        # Try extracting image/video URL
-        media_url = None
         try:
-            media_url = driver.find_element(By.TAG_NAME, "img").get_attribute("src")
-        except:
-            try:
-                media_url = driver.find_element(By.TAG_NAME, "video").get_attribute("src")
-            except:
+            # Open Instagram login page
+            page.goto("https://www.instagram.com/accounts/login/")
+            time.sleep(5)
+
+            # Enter login credentials
+            page.fill("input[name='username']", username)
+            page.fill("input[name='password']", password)
+            page.click("button[type='submit']")
+            time.sleep(5)
+
+            # Open the post URL
+            page.goto(post_url)
+            time.sleep(5)
+
+            # Extract media URL
+            media_url = page.locator("img").get_attribute("src") or page.locator("video").get_attribute("src")
+
+            if not media_url:
                 raise ValueError("Failed to extract media URL")
 
-        if not media_url:
-            raise ValueError("Failed to extract media URL")
+            # Download media file
+            parsed_url = urlparse(media_url)
+            filename = os.path.basename(parsed_url.path)
+            filepath = os.path.join(DOWNLOADS_FOLDER, filename)
 
-        # Download media file
-        parsed_url = urlparse(media_url)
-        filename = os.path.basename(parsed_url.path)
-        filepath = os.path.join(DOWNLOADS_FOLDER, filename)
+            with open(filepath, "wb") as file:
+                file.write(requests.get(media_url).content)
 
-        with open(filepath, "wb") as file:
-            file.write(requests.get(media_url).content)
-
-        return filepath
-    except Exception as e:
-        print(f"Error downloading Instagram post: {e}")
-        return None
-    finally:
-        driver.quit()
+            return filepath
+        except Exception as e:
+            print(f"Error downloading Instagram post: {e}")
+            return None
+        finally:
+            browser.close()
 
 def download_video(post_url, quality):
     unique_filename = f"downloaded_video_{uuid.uuid4().hex}.mp4"
