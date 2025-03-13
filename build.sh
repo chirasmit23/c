@@ -1,10 +1,6 @@
-#!/bin/bash
-
-# Install Google Chrome on Linux
-if ! command -v google-chrome &> /dev/null; then
-  echo "Installing Google Chrome..."
-  wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-  echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' | sudo tee /etc/apt/sources.list.d/google-chrome.list
-  sudo apt update
-  sudo apt install -y google-chrome-stable
-fi
+#!/usr/bin/env bash
+echo "Installing Google Chrome..."
+wget -qO- https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb > google-chrome.deb
+apt update && apt install -y ./google-chrome.deb
+rm google-chrome.deb
+echo "Chrome installed successfully."
