@@ -90,7 +90,8 @@ def index():
 @app.route("/instagram", methods=["POST"])
 def instagram_downloader():
     """Handles Instagram downloads."""
-    post_url = request.form.get("url")  # Use `.get()` to prevent KeyError
+    post_url = request.form.get("video_url")  # Match the name in the form
+ # Use `.get()` to prevent KeyError
 
     if not post_url:
         return jsonify({"success": False, "error": "No URL provided"}), 400
