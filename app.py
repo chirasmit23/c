@@ -9,7 +9,6 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv  
 from urllib.parse import urlparse
 
@@ -28,21 +27,17 @@ DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
 
 def download_instagram_post(post_url, username, password):
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless=new")  # Run in headless mode
+    options.add_argument("--headless")  # Run in headless mode
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    
+    # Set the correct Chrome binary path for Render
+    options.binary_location = "/usr/bin/google-chrome-stable"
 
-    # Find Chromium binary path
-    chrome_path = shutil.which("chromium-browser") or shutil.which("chromium")
-
-    # Set Chrome binary path based on OS
-    if platform.system() == "Windows":
-        options.binary_location = r"C:\Users\hp\Downloads\chrome-win\chrome-win\chrome.exe"
-    else:
-        options.binary_location ="/usr/bin/google-chrome-stable" # For Linux (Render, Ubuntu, etc.)
-
-    # Now correctly indented
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    # Set the correct ChromeDriver path
+    service = Service("/usr/bin/chromedriver")
+    
+    driver = webdriver.Chrome(service=service, options=options)
 
     try:
         driver.get("https://www.instagram.com/accounts/login/")
@@ -59,10 +54,14 @@ def download_instagram_post(post_url, username, password):
         time.sleep(5)
 
         # Try extracting image/video URL
+        media_url = None
         try:
             media_url = driver.find_element(By.TAG_NAME, "img").get_attribute("src")
         except:
-            media_url = driver.find_element(By.TAG_NAME, "video").get_attribute("src")
+            try:
+                media_url = driver.find_element(By.TAG_NAME, "video").get_attribute("src")
+            except:
+                raise ValueError("Failed to extract media URL")
 
         if not media_url:
             raise ValueError("Failed to extract media URL")
