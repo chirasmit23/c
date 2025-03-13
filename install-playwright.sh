@@ -16,3 +16,4 @@ pip install -r requirements.txt
 
 echo "Installing Playwright..."
 npx playwright install --with-deps chromium
+playwright install --with-deps chromium
