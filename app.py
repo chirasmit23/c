@@ -3,6 +3,7 @@ import yt_dlp
 import os
 import uuid
 import time
+import random
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -30,7 +31,7 @@ def download_instagram_post_playwright(post_url):
 
         # Mobile user-agent to bypass login
         page.set_extra_http_headers({
-            "User-Agent": "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36"
+           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
         })
 
         page.goto(post_url, timeout=60000)
@@ -100,6 +101,7 @@ def download_instagram_post_selenium(post_url, username, password):
 
 # ======= YOUTUBE & INSTAGRAM REELS DOWNLOAD (yt-dlp) =======
 def download_video(post_url, quality):
+    time.sleep(random.randint(10, 20)) 
     unique_filename = f"downloaded_video_{uuid.uuid4().hex}.mp4"
     video_path = os.path.join(DOWNLOADS_FOLDER, unique_filename)
 
@@ -112,13 +114,16 @@ def download_video(post_url, quality):
     video_format = quality_formats.get(quality, "bestvideo+bestaudio/best")
 
     ydl_opts = {
-        "format": video_format,
-        "outtmpl": video_path,
-        "merge_output_format": "mp4",
-        "quiet": False,
-        "user_agent": "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36",
-        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}]
+    "format": video_format,
+    "outtmpl": video_path,
+    "merge_output_format": "mp4",
+    "quiet": True,
+    "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
+    "http_headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
     }
+}
+
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
