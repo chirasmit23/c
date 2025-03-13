@@ -7,6 +7,6 @@
         "dest": "app.py"
       }
     ],
-    "ignore": ["static/*"]  
+    
   }
   
