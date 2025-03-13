@@ -55,7 +55,7 @@ def download_instagram_post(post_url, username, password):
             # Download media file
             parsed_url = urlparse(media_url)
             filename = os.path.basename(parsed_url.path)
-            filepath = os.path.join(DOWNLOADS_FOLDER, filename)
+            filepath = os.path.join(Downloads, filename)
 
             with open(filepath, "wb") as file:
                 file.write(requests.get(media_url).content)
