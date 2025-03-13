@@ -106,11 +106,17 @@
                 method: "POST",
                 body: formData
             })
-            .then(response => response.blob())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Download failed.");
+                }
+                return response.blob();
+            })
             .then(blob => {
                 let link = document.createElement("a");
+                let fileType = blob.type.split("/")[1] || "jpg"; // Extract file type
                 link.href = URL.createObjectURL(blob);
-                link.download = "downloaded_post.jpg";
+                link.download = `downloaded_post.${fileType}`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -126,7 +132,7 @@
                 console.error("Error:", error);
                 statusMessage.textContent = "Download failed. Please try again.";
             });
-        });
+        });    
     </script>
 </body>
 </html>
