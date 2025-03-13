@@ -92,33 +92,43 @@
 
     <script>
         document.getElementById("downloadForm").addEventListener("submit", function(event) {
-    event.preventDefault(); // Prevent default form submission
+    event.preventDefault(); // Prevent page reload
 
     let formData = new FormData(this);
+    let statusMessage = document.getElementById("statusMessage");
+    statusMessage.textContent = "Downloading... Please wait.";
 
-    fetch("/video", {
+    fetch("/instagram", {
         method: "POST",
         body: formData
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {  // Corrected condition
-            let link = document.createElement("a");
-            link.href = data.file_path;  // Corrected key from `file_url` to `file_path`
-            link.download = "";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            // Auto-reload after download
-            setTimeout(() => {
-                location.reload();
-            }, 3000);
-        } else {
-            alert("Download failed: " + data.error); // Corrected error key
-        }
+    .then(response => {
+        console.log("Raw Response:", response); // Debugging
+        return response.json(); // Expect JSON response
     })
-    .catch(error => console.error("Error:", error));
+    .then(data => {
+        console.log("Parsed Data:", data); // Debugging
+
+        if (!data.file_url) {
+            throw new Error("No file URL provided by server.");
+        }
+
+        let link = document.createElement("a");
+        link.href = data.file_url;
+        link.download = "downloaded_post.mp4"; // Ensure proper filename
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        statusMessage.textContent = "Download Successful! Reloading...";
+        setTimeout(() => location.reload(), 3000);
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        statusMessage.textContent = "Download failed. Please try again.";
+    });
+});
+Error:", error));
 });   
     </script>
 </body>
