@@ -7,6 +7,7 @@ import requests
 from urllib.parse import urlparse
 from dotenv import load_dotenv  
 from playwright.sync_api import sync_playwright
+import tempfile  # New: Temporary file handling
 
 # Initialize Flask App
 app = Flask(__name__, template_folder="templates")
@@ -19,48 +20,36 @@ PASSWORD = os.getenv("INSTA_PASSWORD")
 if not USERNAME or not PASSWORD:
     raise ValueError("Instagram username or password not set in .env file")
 
-DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
-
 def download_instagram_post(post_url, username, password):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        context = browser.new_context()
-        page = context.new_page()
+        page = browser.new_page()
 
         try:
-            # Open Instagram login page
-            page.goto("https://www.instagram.com/accounts/login/", timeout=60000)
-            time.sleep(3)  # Allow page to load
-
-            # Enter login credentials
+            # Login to Instagram
+            page.goto("https://www.instagram.com/accounts/login/")
+            time.sleep(5)
             page.fill("input[name='username']", username)
             page.fill("input[name='password']", password)
             page.click("button[type='submit']")
-            time.sleep(5)  # Wait for login
+            time.sleep(5)
 
-            # Open the Instagram post URL
-            page.goto(post_url, timeout=60000)
-            time.sleep(3)  # Allow media to load
+            # Open the post URL
+            page.goto(post_url)
+            time.sleep(5)
 
-            # Extract media URL (Image or Video)
-            media_url = None
-            if page.locator("video").count() > 0:
-                media_url = page.locator("video").first.get_attribute("src")
-            elif page.locator("img").count() > 0:
-                media_url = page.locator("img").first.get_attribute("src")
-
+            # Extract media URL
+            media_url = page.locator("video").get_attribute("src") or page.locator("img").get_attribute("src")
             if not media_url:
                 raise ValueError("Failed to extract media URL")
 
-            # Download media file
-            parsed_url = urlparse(media_url)
-            filename = os.path.basename(parsed_url.path)
-            filepath = os.path.join(DOWNLOADS_FOLDER, filename)
+            # Download media to a temporary file
+            response = requests.get(media_url)
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+            temp_file.write(response.content)
+            temp_file.close()
 
-            with open(filepath, "wb") as file:
-                file.write(requests.get(media_url).content)
-
-            return filepath
+            return temp_file.name
         except Exception as e:
             print(f"Error downloading Instagram post: {e}")
             return None
@@ -68,8 +57,9 @@ def download_instagram_post(post_url, username, password):
             browser.close()
 
 def download_video(post_url, quality):
-    unique_filename = f"downloaded_video_{uuid.uuid4().hex}.mp4"
-    video_path = os.path.join(DOWNLOADS_FOLDER, unique_filename)
+    # Generate a temporary file path
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+    video_path = temp_file.name
 
     quality_formats = {
         "1080": "bestvideo[height<=1080]+bestaudio/best",
@@ -84,7 +74,7 @@ def download_video(post_url, quality):
         "outtmpl": video_path,
         "merge_output_format": "mp4",
         "quiet": True,
-        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}]
+        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferredformat": "mp4"}]
     }
 
     try:
@@ -100,36 +90,30 @@ def download_video(post_url, quality):
 def index():
     return render_template("index.html")     
 
-@app.route("/instagram", methods=["GET", "POST"])
+@app.route("/instagram", methods=["POST"])
 def instagram_downloader():
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-        post_url = request.form["url"]
+    username = request.form["username"]
+    password = request.form["password"]
+    post_url = request.form["url"]
 
-        filepath = download_instagram_post(post_url, username, password)
-        if filepath:
-            return send_file(filepath, as_attachment=True)
-        else:
-            return "Error: Instagram post could not be downloaded.", 500
-    return render_template("instagram_downloader.html")
+    filepath = download_instagram_post(post_url, username, password)
+    if filepath:
+        return send_file(filepath, as_attachment=True)
+    else:
+        return "Error: Instagram post could not be downloaded.", 500
 
 @app.route("/video", methods=["POST"])
 def video_downloader():
     video_url = request.form.get("video_url")
     quality = request.form.get("quality")
     
-    print(f"Received video URL: {video_url}")
-    print(f"Selected Quality: {quality}")
-
     if video_url:
         file_path = download_video(video_url, quality)
         if file_path:
             return send_file(file_path, as_attachment=True)
         else:
-            print("Download failed")
             return "Error: Video could not be downloaded.", 500
-    return render_template("index.html")
+    return "Invalid request", 400
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
