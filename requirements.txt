@@ -38,3 +38,4 @@ yt-dlp==2025.2.19
 gunicorn==21.2.0
 werkzeug
 gunicorn
+playwright
