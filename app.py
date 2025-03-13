@@ -64,7 +64,11 @@ def download_media(url, username=None, password=None):
     except yt_dlp.DownloadError as e:
         logger.error(f"Download Error: {e}")
         error_message = str(e).lower()
-        if "login required" in error_message or "rate limit" in error_message:
+        if is_instagram_reel_url(url) and "login required" in error_message:
+            #   If it's a Reel and yt-dlp says login is required,
+            #   it's likely not a directly downloadable public Reel
+            return "Error: This public Reel is not directly downloadable."
+        elif "login required" in error_message or "rate limit" in error_message:
             return "Error: This content may require login or is rate-limited."
         else:
             return "Error: Media could not be downloaded."
