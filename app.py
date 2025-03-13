@@ -24,25 +24,30 @@ DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
 def download_instagram_post(post_url, username, password):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
+        context = browser.new_context()
+        page = context.new_page()
 
         try:
             # Open Instagram login page
-            page.goto("https://www.instagram.com/accounts/login/")
-            time.sleep(5)
+            page.goto("https://www.instagram.com/accounts/login/", timeout=60000)
+            time.sleep(3)  # Allow page to load
 
             # Enter login credentials
             page.fill("input[name='username']", username)
             page.fill("input[name='password']", password)
             page.click("button[type='submit']")
-            time.sleep(5)
+            time.sleep(5)  # Wait for login
 
-            # Open the post URL
-            page.goto(post_url)
-            time.sleep(5)
+            # Open the Instagram post URL
+            page.goto(post_url, timeout=60000)
+            time.sleep(3)  # Allow media to load
 
-            # Extract media URL
-            media_url = page.locator("img").get_attribute("src") or page.locator("video").get_attribute("src")
+            # Extract media URL (Image or Video)
+            media_url = None
+            if page.locator("video").count() > 0:
+                media_url = page.locator("video").first.get_attribute("src")
+            elif page.locator("img").count() > 0:
+                media_url = page.locator("img").first.get_attribute("src")
 
             if not media_url:
                 raise ValueError("Failed to extract media URL")
