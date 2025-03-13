@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_file, jsonify, redirect, url_for
+from flask import Flask, render_template, request, send_file, jsonify
 import yt_dlp
 import os
 import uuid
@@ -25,65 +25,105 @@ DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
 os.makedirs(DOWNLOADS_FOLDER, exist_ok=True)  # Ensure download folder exists
 
 def restart_app():
-    """Restart the app after a task completion"""
+    """Restart the app after completing a task."""
     time.sleep(2)  # Small delay before restarting
     os.execv(__file__, ["python"] + os.sys.argv)  # Restart the script
 
-def download_instagram_post(post_url, username, password):
+def download_instagram_post_playwright(post_url):
+    """Uses Playwright to extract Instagram media URL and download it."""
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
 
-        page.goto("https://www.instagram.com/accounts/login/", timeout=60000)
-        time.sleep(3)
-
-        page.fill("input[name='username']", username)
-        page.fill("input[name='password']", password)
-        page.click("button[type='submit']")
-        time.sleep(5)
-
         page.goto(post_url, timeout=60000)
-        time.sleep(3)
+        time.sleep(random.randint(3, 6))
 
+        media_url = None
         try:
-            media_url = page.locator("article img").get_attribute("src")
-        except:
-            media_url = None
+            media_url = page.locator("video").get_attribute("src")
+            if not media_url:
+                media_url = page.locator("img").get_attribute("src")
+        except Exception as e:
+            print(f"Error extracting media URL: {e}")
+
+        browser.close()
 
         if not media_url:
             return None
 
-        filename = os.path.join(os.getcwd(), "downloaded_post.jpg")
-        response = requests.get(media_url)
-        with open(filename, "wb") as file:
-            file.write(response.content)
+        parsed_url = urlparse(media_url)
+        filename = os.path.basename(parsed_url.path)
+        filepath = os.path.join(DOWNLOADS_FOLDER, filename)
 
-        browser.close()
-        return filename
+        with open(filepath, "wb") as file:
+            file.write(requests.get(media_url).content)
 
-@app.route("/download", methods=["POST"])
-def download():
-    data = request.json
-    post_url = data.get("post_url")
-    username = data.get("username")
-    password = data.get("password")
+        return filepath
 
-    if not post_url or not username or not password:
-        return jsonify({"error": "Missing parameters"}), 400
+def download_video(post_url, quality="best"):
+    """Downloads videos using yt-dlp."""
+    unique_filename = f"video_{uuid.uuid4().hex}.mp4"
+    video_path = os.path.join(DOWNLOADS_FOLDER, unique_filename)
 
-    filename = download_instagram_post(post_url, username, password)
+    quality_formats = {
+        "1080": "bestvideo[height<=1080]+bestaudio/best",
+        "720": "bestvideo[height<=720]+bestaudio/best",
+        "480": "bestvideo[height<=480]+bestaudio/best",
+        "best": "bestvideo+bestaudio/best"
+    }
+    video_format = quality_formats.get(quality, "bestvideo+bestaudio/best")
+
+    ydl_opts = {
+        "format": video_format,
+        "outtmpl": video_path,
+        "merge_output_format": "mp4",
+        "quiet": True,
+        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+        }
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([post_url])
+        return video_path
+    except Exception as e:
+        print(f"Download Error: {e}")
+        return None
+
+@app.route("/", methods=["GET"])
+def index():
+    return render_template("index.html")
+
+@app.route("/instagram", methods=["POST"])
+def instagram_downloader():
+    """Handles Instagram downloads."""
+    post_url = request.form["url"]
+
+    filepath = download_instagram_post_playwright(post_url)
     
-    if filename:
-        restart_app()  # Restart app after successful download
-        return jsonify({"message": "Download successful", "file": filename})
+    if filepath:
+        restart_app()  # Restart after successful download
+        return send_file(filepath, as_attachment=True)
     else:
-        return jsonify({"error": "Download failed"}), 500
+        return "Error: Instagram post could not be downloaded.", 500
 
-# Restart the app after each request
-@app.before_request
-def before_request():
-    if request.endpoint in ["download"]:
-        restart_app()
+@app.route("/video", methods=["POST"])
+def video_downloader():
+    """Handles YouTube & Instagram reels downloads."""
+    video_url = request.form.get("video_url")
+    quality = request.form.get("quality", "best")
+
+    if video_url:
+        file_path = download_video(video_url, quality)
+        if file_path:
+            restart_app()  # Restart after successful download
+            return send_file(file_path, as_attachment=True)
+        else:
+            return "Error: Video could not be downloaded.", 500
+
+    return render_template("index.html")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
