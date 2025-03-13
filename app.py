@@ -39,9 +39,9 @@ def download_instagram_post(post_url, username, password):
     if platform.system() == "Windows":
         options.binary_location = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     else:
-        options.binary_location = "/usr/bin/google-chrome"  # For Linux (Render, Ubuntu, etc.)
+        options.binary_location ="/usr/bin/google-chrome-stable" # For Linux (Render, Ubuntu, etc.)
 
-    # ✅ Now correctly indented
+    # Now correctly indented
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
     try:
