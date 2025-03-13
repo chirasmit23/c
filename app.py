@@ -23,7 +23,54 @@ PASSWORD = os.getenv("INSTA_PASSWORD")
 
 DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
 os.makedirs(DOWNLOADS_FOLDER, exist_ok=True)  # Ensure download folder exists
+def download_instagram_post(post_url, username, password):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)  # Set False to see browser actions
+        page = browser.new_page()
 
+        page.goto("https://www.instagram.com/accounts/login/", timeout=60000)
+        time.sleep(3)
+
+        page.fill("input[name='username']", username)
+        page.fill("input[name='password']", password)
+        page.click("button[type='submit']")
+        time.sleep(5)
+
+        page.goto(post_url, timeout=60000)
+        time.sleep(3)
+
+        try:
+            media_url = page.locator("article img").get_attribute("src")
+        except:
+            media_url = None
+
+        if not media_url:
+            return None
+
+        filename = os.path.join(os.getcwd(), "downloaded_post.jpg")
+        response = requests.get(media_url)
+        with open(filename, "wb") as file:
+            file.write(response.content)
+
+        browser.close()
+        return filename
+
+@app.route("/download", methods=["POST"])
+def download():
+    data = request.json
+    post_url = data.get("post_url")
+    username = data.get("username")
+    password = data.get("password")
+
+    if not post_url or not username or not password:
+        return jsonify({"error": "Missing parameters"}), 400
+
+    filename = download_instagram_post(post_url, username, password)
+    
+    if filename:
+        return jsonify({"message": "Download successful", "file": filename})
+    else:
+        return jsonify({"error": "Download failed"}), 500
 # ======= INSTAGRAM DOWNLOAD (PLAYWRIGHT) =======
 def download_instagram_post_playwright(post_url):
     """Uses Playwright to extract Instagram video/image URL and download it."""
