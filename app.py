@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, send_file
 import yt_dlp
+import shutil
 import os
 import uuid
 import time
@@ -27,11 +28,19 @@ DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
 def download_instagram_post(post_url, username, password):
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")
+# Set up Chrome options
+options = webdriver.ChromeOptions()
+options.add_argument("--headless")  # Run in headless mode
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
 
-    #  Set the correct Chrome binary path
-    options.binary_location =r"C:\Users\hp\Downloads\chrome-win\chrome-win\chrome.exe"
-    #  Initialize Chrome driver with proper configurations
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+# Find Chromium binary path
+chrome_path = shutil.which("chromium-browser") or shutil.which("chromium")
+if chrome_path:
+    options.binary_location = chrome_path
+
+# Start WebDriver
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
     try:
         driver.get("https://www.instagram.com/accounts/login/")
