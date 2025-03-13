@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, send_file, jsonify
 import yt_dlp
 import os
 import uuid
@@ -21,7 +21,7 @@ PASSWORD = os.getenv("INSTA_PASSWORD")
 
 if not USERNAME or not PASSWORD:
     logger.warning(
-        "Instagram username or password not set in .env file. Login-based downloads may not work."
+        "Instagram username or password not set in .env file. Login-based downloads for some Instagram posts may not work."
     )
 
 DOWNLOADS_FOLDER = "/tmp"  # Use /tmp for server environments
@@ -33,10 +33,15 @@ def is_instagram_url(url):
     return parsed_url.netloc in ("www.instagram.com", "instagram.com")
 
 
-def download_instagram_media(url, username=None, password=None):
+def is_instagram_reel_url(url):
+    """Checks if a URL is an Instagram Reel URL."""
+    parsed_url = urlparse(url)
+    return "/reel/" in parsed_url.path
+
+
+def download_media(url, username=None, password=None):
     """
-    Downloads Instagram Reels/videos without login if possible,
-    otherwise uses login for posts that require it.
+    Downloads media using yt-dlp, prioritizing Reels without login.
     """
     try:
         ydl_opts = {
@@ -60,12 +65,12 @@ def download_instagram_media(url, username=None, password=None):
         logger.error(f"Download Error: {e}")
         error_message = str(e).lower()
         if "login required" in error_message or "rate limit" in error_message:
-            return "Error: This Instagram content requires login or is rate-limited. Public content only is downloadable."
+            return "Error: This content may require login or is rate-limited."
         else:
-            return "Error: Instagram media could not be downloaded."
+            return "Error: Media could not be downloaded."
     except Exception as e:
-        logger.error(f"Error downloading Instagram media: {e}")
-        return "An unexpected error occurred."
+        logger.error(f"Error downloading media: {e}")
+        return "Error: An unexpected error occurred."
 
 
 def download_video(post_url, quality):
@@ -107,22 +112,29 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/instagram", methods=["GET", "POST"])
-def instagram_downloader():
-    if request.method == "POST":
-        post_url = request.form["url"]
-        username = request.form.get("username")  # Use get() to avoid KeyError
-        password = request.form.get("password")  # Use get() to avoid KeyError
+@app.route("/download", methods=["POST"])
+def download():
+    """
+    Handles download requests.
+    """
+    url = request.form.get("url")
+    username = request.form.get("username")
+    password = request.form.get("password")
 
-        if is_instagram_url(post_url):
-            filepath = download_instagram_media(post_url, username, password)
-            if filepath and "Error:" not in filepath:  # Check for error message
-                return send_file(filepath, as_attachment=True)
-            else:
-                return filepath, 500  # Return the error message
+    if not url:
+        return jsonify({"error": "URL parameter is required."}), 400
+
+    logger.info(f"Download request for URL: {url}")
+
+    try:
+        filepath = download_media(url, username, password)
+        if filepath and "Error:" not in filepath:
+            return send_file(filepath, as_attachment=True)
         else:
-            return "Error: Invalid Instagram URL.", 400
-    return render_template("instagram_downloader.html")
+            return jsonify({"error": filepath}), 500  # Return the error message
+    except Exception as e:
+        logger.exception("An error occurred during download:")
+        return jsonify({"error": "An unexpected error occurred."}), 500
 
 
 @app.route("/video", methods=["POST"])
