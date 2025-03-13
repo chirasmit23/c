@@ -27,36 +27,33 @@ DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
 
 def download_instagram_post(post_url, username, password):
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")
-# Set up Chrome options
-options = webdriver.ChromeOptions()
-options.add_argument("--headless")  # Run in headless mode
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--headless")  # Run in headless mode
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
 
-# Find Chromium binary path
-chrome_path = shutil.which("chromium-browser") or shutil.which("chromium")
-if chrome_path:
-    options.binary_location = chrome_path
+    # Find Chromium binary path
+    chrome_path = shutil.which("chromium-browser") or shutil.which("chromium")
+    if chrome_path:
+        options.binary_location = chrome_path
 
-# Start WebDriver
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    # Start WebDriver
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
     try:
         driver.get("https://www.instagram.com/accounts/login/")
         time.sleep(5)
 
-        #  Enter login credentials
+        # Enter login credentials
         driver.find_element(By.NAME, "username").send_keys(username)
         driver.find_element(By.NAME, "password").send_keys(password)
         driver.find_element(By.XPATH, "//button[@type='submit']").click()
         time.sleep(5)
 
-        #  Open the post URL
+        # Open the post URL
         driver.get(post_url)
         time.sleep(5)
 
-        #  Try extracting image/video URL
+        # Try extracting image/video URL
         try:
             media_url = driver.find_element(By.TAG_NAME, "img").get_attribute("src")
         except:
@@ -65,7 +62,7 @@ driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), opti
         if not media_url:
             raise ValueError("Failed to extract media URL")
 
-        #  Download media file
+        # Download media file
         parsed_url = urlparse(media_url)
         filename = os.path.basename(parsed_url.path)
         filepath = os.path.join(DOWNLOADS_FOLDER, filename)
@@ -74,11 +71,9 @@ driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), opti
             file.write(requests.get(media_url).content)
 
         return filepath
-
     except Exception as e:
         print(f"Error downloading Instagram post: {e}")
         return None
-
     finally:
         driver.quit()
 
