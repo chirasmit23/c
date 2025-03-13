@@ -33,9 +33,12 @@ def download_instagram_post(post_url, username, password):
 
     # Find Chromium binary path
     chrome_path = shutil.which("chromium-browser") or shutil.which("chromium")
-    if chrome_path:
-        options.binary_location = chrome_path
-        options.binary_location=r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+    # Set Chrome binary path based on OS
+if platform.system() == "Windows":
+    options.binary_location = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+else:
+    options.binary_location = "/usr/bin/google-chrome"  # For Linux (Render, Ubuntu, etc.)
+
 
     # Start WebDriver
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
