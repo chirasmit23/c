@@ -100,39 +100,37 @@ def download_instagram_post_selenium(post_url, username, password):
         driver.quit()
 
 # ======= YOUTUBE & INSTAGRAM REELS DOWNLOAD (yt-dlp) =======
-def download_video(post_url, quality):
-    time.sleep(random.randint(10, 20)) 
-    unique_filename = f"downloaded_video_{uuid.uuid4().hex}.mp4"
-    video_path = os.path.join(DOWNLOADS_FOLDER, unique_filename)
+def download_instagram_post(post_url):
+    """Downloads Instagram reels/posts using Playwright to bypass login requirements."""
+    
+    # Add delay to prevent rate limiting
+    time.sleep(random.randint(10, 20))  # ⏳ Delay before request
 
-    quality_formats = {
-        "1080": "bestvideo[height<=1080]+bestaudio/best",
-        "720": "bestvideo[height<=720]+bestaudio/best",
-        "480": "bestvideo[height<=480]+bestaudio/best",
-        "best": "bestvideo+bestaudio/best"
-    }
-    video_format = quality_formats.get(quality, "bestvideo+bestaudio/best")
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
 
-    ydl_opts = {
-    "format": video_format,
-    "outtmpl": video_path,
-    "merge_output_format": "mp4",
-    "quiet": True,
-    "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
-    "http_headers": {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
-    }
-}
+        page.goto(post_url, timeout=60000)
+        time.sleep(5)  # Give page time to load
 
+        try:
+            media_url = page.locator("img").get_attribute("src")  # Try to get image
+        except:
+            media_url = page.locator("video").get_attribute("src")  # If image fails, try video
 
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([post_url])
-        return video_path
-    except Exception as e:
-        print(f"Download Error: {e}")
-        return None
+        browser.close()
 
+        if media_url:
+            response = requests.get(media_url)
+            filename = f"{uuid.uuid4().hex}.mp4"
+            filepath = os.path.join(os.path.expanduser("~"), "Downloads", filename)
+
+            with open(filepath, "wb") as file:
+                file.write(response.content)
+
+            return filepath
+        else:
+            return None
 # ======= FLASK ROUTES =======
 @app.route("/", methods=["GET"])
 def index():
