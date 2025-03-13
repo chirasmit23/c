@@ -131,6 +131,38 @@ def download_instagram_post(post_url):
             return filepath
         else:
             return None
+ def download_video(post_url, quality="best"):
+    time.sleep(random.randint(10, 20))  # Delay to avoid rate limits
+
+    unique_filename = f"video_{uuid.uuid4().hex}.mp4"
+    video_path = os.path.join(os.getcwd(), unique_filename)
+
+    quality_formats = {
+        "1080": "bestvideo[height<=1080]+bestaudio/best",
+        "720": "bestvideo[height<=720]+bestaudio/best",
+        "480": "bestvideo[height<=480]+bestaudio/best",
+        "best": "bestvideo+bestaudio/best"
+    }
+    video_format = quality_formats.get(quality, "bestvideo+bestaudio/best")
+
+    ydl_opts = {
+        "format": video_format,
+        "outtmpl": video_path,
+        "merge_output_format": "mp4",
+        "quiet": True,
+        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+        }
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([post_url])
+        return video_path
+    except Exception as e:
+        print(f"Download Error: {e}")
+        return None           
 # ======= FLASK ROUTES =======
 @app.route("/", methods=["GET"])
 def index():
