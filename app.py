@@ -37,7 +37,7 @@ def download_instagram_post(post_url, username, password):
 
     # Set Chrome binary path based on OS
     if platform.system() == "Windows":
-        options.binary_location = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+        options.binary_location = r""C:\Users\hp\Downloads\chrome-win\chrome-win\chrome.exe""
     else:
         options.binary_location ="/usr/bin/google-chrome-stable" # For Linux (Render, Ubuntu, etc.)
 
