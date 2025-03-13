@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, send_file
 import yt_dlp
 import os
 import uuid
-import time
 import requests
 from urllib.parse import urlparse
 from dotenv import load_dotenv  
@@ -30,17 +29,17 @@ def download_instagram_post(post_url, username, password):
         try:
             # Open Instagram login page
             page.goto("https://www.instagram.com/accounts/login/", timeout=60000)
-            time.sleep(3)  # Allow page to load
+            page.wait_for_selector("input[name='username']", timeout=10000)
 
             # Enter login credentials
             page.fill("input[name='username']", username)
             page.fill("input[name='password']", password)
             page.click("button[type='submit']")
-            time.sleep(5)  # Wait for login
+            page.wait_for_timeout(5000)  # Allow time for login
 
             # Open the Instagram post URL
             page.goto(post_url, timeout=60000)
-            time.sleep(3)  # Allow media to load
+            page.wait_for_timeout(3000)  # Allow media to load
 
             # Extract media URL (Image or Video)
             media_url = None
