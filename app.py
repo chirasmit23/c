@@ -71,10 +71,10 @@ def download_video(post_url, quality):
 
     ydl_opts = {
         "format": video_format,
-        "outtmpl": "downloaded_video.mp4",
+        "outtmpl":video_path,
         "merge_output_format": "mp4",
         "quiet": True,
-        "postprocessors": [{"key": "FFmpegVideoRemuxer", "format": "mp4"}]
+        "postprocessors": [{"key": "FFmpegVideoRemuxer", "preferredformat": "mp4"}] 
     }
 
     try:
