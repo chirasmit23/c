@@ -28,23 +28,25 @@ os.makedirs(DOWNLOADS_FOLDER, exist_ok=True)  # Ensure download folder exists
 def download_instagram_post_playwright(post_url):
     """Uses Playwright to extract Instagram video/image URL and download it."""
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
+        browser = p.chromium.launch(headless=True)  # Change to False to debug
+        context = browser.new_context()
+        page = context.new_page()
 
-        # Mobile user-agent to bypass login
+        # Mobile user-agent to avoid detection
         page.set_extra_http_headers({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Mobile Safari/537.36"
         })
 
         page.goto(post_url, timeout=60000)
         time.sleep(random.randint(5, 10))  # Randomized delay to reduce detection
 
+        media_url = None
         try:
             media_url = page.locator("video").get_attribute("src")  # Try video first
             if not media_url:
                 media_url = page.locator("img").get_attribute("src")  # If not, try image
-        except:
-            media_url = None
+        except Exception as e:
+            print(f"Error extracting media URL: {e}")
 
         browser.close()
 
@@ -59,6 +61,7 @@ def download_instagram_post_playwright(post_url):
             file.write(requests.get(media_url).content)
 
         return filepath
+
 
 # ======= INSTAGRAM DOWNLOAD (SELENIUM - FALLBACK) =======
 def download_instagram_post_selenium(post_url, username, password):
