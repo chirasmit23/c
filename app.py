@@ -35,7 +35,7 @@ def download_instagram_post(post_url, username, password):
     chrome_path = shutil.which("chromium-browser") or shutil.which("chromium")
     if chrome_path:
         options.binary_location = chrome_path
-         options.binary_location=r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+        options.binary_location=r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 
     # Start WebDriver
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
