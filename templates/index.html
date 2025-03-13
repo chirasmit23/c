@@ -92,35 +92,34 @@
 
     <script>
         document.getElementById("downloadForm").addEventListener("submit", function(event) {
-            event.preventDefault(); // Prevent default form submission
+    event.preventDefault(); // Prevent default form submission
 
-            let formData = new FormData(this);
+    let formData = new FormData(this);
 
-            fetch("/video", {
-                method: "POST",
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === "success") {
-                    // Trigger file download
-                    let link = document.createElement("a");
-                    link.href = data.file_url;
-                    link.download = "";
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+    fetch("/video", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {  // Corrected condition
+            let link = document.createElement("a");
+            link.href = data.file_path;  // Corrected key from `file_url` to `file_path`
+            link.download = "";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
 
-                    // Auto-reload after download
-                    setTimeout(() => {
-                        location.reload();
-                    }, 3000); // Reload after 3 seconds
-                } else {
-                    alert("Download failed: " + data.message);
-                }
-            })
-            .catch(error => console.error("Error:", error));
-        });
+            // Auto-reload after download
+            setTimeout(() => {
+                location.reload();
+            }, 3000);
+        } else {
+            alert("Download failed: " + data.error); // Corrected error key
+        }
+    })
+    .catch(error => console.error("Error:", error));
+});   
     </script>
 </body>
 </html>
