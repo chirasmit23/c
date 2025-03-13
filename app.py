@@ -74,7 +74,7 @@ def download_video(post_url, quality):
         "outtmpl":video_path,
         "merge_output_format": "mp4",
         "quiet": True,
-        "postprocessors": [{"key": "FFmpegVideoRemuxer", "preferredformat": "mp4"}] 
+        "postprocessors": [{"key": "FFmpegVideoRemuxer", "preferedformat": "mp4"}] 
     }
 
     try:
