@@ -101,7 +101,7 @@ def instagram_downloader():
         return jsonify({"success": True, "file_url": f"/downloads/{os.path.basename(filepath)}"})
     else:
         return jsonify({"success": False, "error": "Instagram post could not be downloaded."})
-
+    return render_template("instagram_downloader.html")
 @app.route("/video", methods=["POST"])
 def video_downloader():
     """Handles YouTube & Instagram reels downloads."""
@@ -116,7 +116,7 @@ def video_downloader():
         return jsonify({"success": True, "file_url": f"/downloads/{os.path.basename(file_path)}"})
     else:
         return jsonify({"success": False, "error": "Video could not be downloaded."})
-
+    return render_template("index.html")
 @app.route("/downloads/<filename>")
 def serve_download(filename):
     """Serves downloaded files."""
