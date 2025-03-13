@@ -5,10 +5,6 @@ import uuid
 import time
 import random
 import requests
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
 from urllib.parse import urlparse
 from playwright.sync_api import sync_playwright  
@@ -23,11 +19,6 @@ PASSWORD = os.getenv("INSTA_PASSWORD")
 
 DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
 os.makedirs(DOWNLOADS_FOLDER, exist_ok=True)  # Ensure download folder exists
-
-def restart_app():
-    """Restart the app after completing a task."""
-    time.sleep(2)  # Small delay before restarting
-    os.execv(__file__, ["python"] + os.sys.argv)  # Restart the script
 
 def download_instagram_post_playwright(post_url):
     """Uses Playwright to extract Instagram media URL and download it."""
@@ -104,10 +95,9 @@ def instagram_downloader():
     filepath = download_instagram_post_playwright(post_url)
     
     if filepath:
-        restart_app()  # Restart after successful download
-        return send_file(filepath, as_attachment=True)
+        return jsonify({"success": True, "file_path": filepath})
     else:
-        return "Error: Instagram post could not be downloaded.", 500
+        return jsonify({"success": False, "error": "Instagram post could not be downloaded."})
 
 @app.route("/video", methods=["POST"])
 def video_downloader():
@@ -118,12 +108,11 @@ def video_downloader():
     if video_url:
         file_path = download_video(video_url, quality)
         if file_path:
-            restart_app()  # Restart after successful download
-            return send_file(file_path, as_attachment=True)
+            return jsonify({"success": True, "file_path": file_path})
         else:
-            return "Error: Video could not be downloaded.", 500
+            return jsonify({"success": False, "error": "Video could not be downloaded."})
 
-    return render_template("index.html")
+    return jsonify({"success": False, "error": "Invalid video URL."})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
