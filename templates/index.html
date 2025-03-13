@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chiros-All Video Downloader</title> <link rel="stylesheet" href="static/style.css">
-
+    <title>Chiros-All Video Downloader</title> 
+    <link rel="stylesheet" href="static/style.css">
 
     <style>
         body {
@@ -57,24 +57,24 @@
 <body>
     <nav>
         <a href="/instagram" id="postDownloaderButton" class="btn btn-secondary no-underline">Instagram Post Downloader</a>
-
     </nav>
+
     <div class="container mt-5">
         <h2 class="chiros-style">chiros</h2>
         <div style="height: 10px;"></div>
         <h1 class="text-center">Instagram, Facebook & YouTube Videos Downloader</h1>
         <div style="height: 45px;"></div>
         <div class="card p-4 shadow">
-            <form action="/video" method="post">
+            <form id="downloadForm">
                 <div class="mb-3">
                     <label for="video_url" class="form-label">Enter Video URL:</label>
-                    <input type="text" name="video_url" class="form-control" required placeholder="Paste video URL here...">
+                    <input type="text" id="video_url" name="video_url" class="form-control" required placeholder="Paste video URL here...">
                 </div>
                 
                 <!-- Video Quality Selection -->
                 <div class="mb-3">
                     <label for="quality" class="form-label mt-3">Select Video Quality:</label>
-                    <select name="quality" class="form-control">
+                    <select id="quality" name="quality" class="form-control">
                         <option value="best">Best Available</option>
                         <option value="1080">1080p</option>
                         <option value="720">720p</option>
@@ -86,7 +86,41 @@
             </form>
         </div>
     </div>
+
     <div style="height: 70px;"></div> <!-- Adds 70px gap -->
     <h2 class="thank-you">Thanks for visiting chiros - created by Chirasmit</h2>
+
+    <script>
+        document.getElementById("downloadForm").addEventListener("submit", function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            let formData = new FormData(this);
+
+            fetch("/video", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    // Trigger file download
+                    let link = document.createElement("a");
+                    link.href = data.file_url;
+                    link.download = "";
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    // Auto-reload after download
+                    setTimeout(() => {
+                        location.reload();
+                    }, 3000); // Reload after 3 seconds
+                } else {
+                    alert("Download failed: " + data.message);
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        });
+    </script>
 </body>
 </html>
