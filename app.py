@@ -90,12 +90,15 @@ def index():
 @app.route("/instagram", methods=["POST"])
 def instagram_downloader():
     """Handles Instagram downloads."""
-    post_url = request.form["url"]
+    post_url = request.form.get("url")  # Use `.get()` to prevent KeyError
+
+    if not post_url:
+        return jsonify({"success": False, "error": "No URL provided"}), 400
 
     filepath = download_instagram_post_playwright(post_url)
     
     if filepath:
-        return jsonify({"success": True, "file_path": filepath})
+        return jsonify({"success": True, "file_url": f"/downloads/{os.path.basename(filepath)}"})
     else:
         return jsonify({"success": False, "error": "Instagram post could not be downloaded."})
 
@@ -105,15 +108,25 @@ def video_downloader():
     video_url = request.form.get("video_url")
     quality = request.form.get("quality", "best")
 
-    if video_url:
-        file_path = download_video(video_url, quality)
-        if file_path:
-            return jsonify({"success": True, "file_path": file_path})
-        else:
-            return jsonify({"success": False, "error": "Video could not be downloaded."})
+    if not video_url:
+        return jsonify({"success": False, "error": "No video URL provided"}), 400
 
-    return jsonify({"success": False, "error": "Invalid video URL."})
+    file_path = download_video(video_url, quality)
+    if file_path:
+        return jsonify({"success": True, "file_url": f"/downloads/{os.path.basename(file_path)}"})
+    else:
+        return jsonify({"success": False, "error": "Video could not be downloaded."})
+
+@app.route("/downloads/<filename>")
+def serve_download(filename):
+    """Serves downloaded files."""
+    file_path = os.path.join(DOWNLOADS_FOLDER, filename)
+    
+    if os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True)
+    else:
+        return "File not found", 404
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)
