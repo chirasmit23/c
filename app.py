@@ -5,7 +5,6 @@ import uuid
 import logging
 from urllib.parse import urlparse
 from dotenv import load_dotenv
-import requests
 
 # Initialize Flask App
 app = Flask(__name__, template_folder="templates")
@@ -21,14 +20,18 @@ USERNAME = os.getenv("INSTA_USERNAME")
 PASSWORD = os.getenv("INSTA_PASSWORD")
 
 if not USERNAME or not PASSWORD:
-    logger.warning("Instagram username or password not set in .env file. Login-based downloads may not work.")
+    logger.warning(
+        "Instagram username or password not set in .env file. Login-based downloads may not work."
+    )
 
 DOWNLOADS_FOLDER = "/tmp"  # Use /tmp for server environments
+
 
 def is_instagram_url(url):
     """Checks if a URL is an Instagram URL."""
     parsed_url = urlparse(url)
     return parsed_url.netloc in ("www.instagram.com", "instagram.com")
+
 
 def download_instagram_media(url, username=None, password=None):
     """
@@ -53,9 +56,17 @@ def download_instagram_media(url, username=None, password=None):
             info_dict = ydl.extract_info(url, download=False)
             filename = ydl.prepare_filename(info_dict)
         return filename
+    except yt_dlp.DownloadError as e:
+        logger.error(f"Download Error: {e}")
+        error_message = str(e).lower()
+        if "login required" in error_message or "rate limit" in error_message:
+            return "Error: This Instagram content requires login or is rate-limited. Public content only is downloadable."
+        else:
+            return "Error: Instagram media could not be downloaded."
     except Exception as e:
         logger.error(f"Error downloading Instagram media: {e}")
-        return None
+        return "An unexpected error occurred."
+
 
 def download_video(post_url, quality):
     """Downloads videos using yt-dlp."""
@@ -66,7 +77,7 @@ def download_video(post_url, quality):
         "1080": "bestvideo[height<=1080]+bestaudio/best",
         "720": "bestvideo[height<=720]+bestaudio/best",
         "480": "bestvideo[height<=480]+bestaudio/best",
-        "best": "bestvideo+bestaudio/best"
+        "best": "bestvideo+bestaudio/best",
     }
     video_format = quality_formats.get(quality, "bestvideo+bestaudio/best")
 
@@ -75,21 +86,26 @@ def download_video(post_url, quality):
         "outtmpl": video_path,
         "merge_output_format": "mp4",
         "quiet": True,
-        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}]
+        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([post_url])
         return video_path
+    except yt_dlp.DownloadError as e:
+        logger.error(f"Download Error: {e}")
+        return "Error: Video could not be downloaded."
     except Exception as e:
         logger.error(f"Download Error: {e}")
-        return None
+        return "Error: An unexpected error occurred."
+
 
 # Flask Routes
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
+
 
 @app.route("/instagram", methods=["GET", "POST"])
 def instagram_downloader():
@@ -100,13 +116,14 @@ def instagram_downloader():
 
         if is_instagram_url(post_url):
             filepath = download_instagram_media(post_url, username, password)
-            if filepath:
+            if filepath and "Error:" not in filepath:  # Check for error message
                 return send_file(filepath, as_attachment=True)
             else:
-                return "Error: Instagram media could not be downloaded.", 500
+                return filepath, 500  # Return the error message
         else:
             return "Error: Invalid Instagram URL.", 400
     return render_template("instagram_downloader.html")
+
 
 @app.route("/video", methods=["POST"])
 def video_downloader():
@@ -118,12 +135,13 @@ def video_downloader():
 
     if video_url:
         file_path = download_video(video_url, quality)
-        if file_path:
+        if file_path and "Error:" not in file_path:  # Check for error message
             return send_file(file_path, as_attachment=True)
         else:
-            logger.error("Download failed")
-            return "Error: Video could not be downloaded.", 500
-    return render_template("index.html")
+            return file_path, 500  # Return the error message
+    else:
+        return render_template("index.html")
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
