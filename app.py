@@ -22,7 +22,7 @@ USERNAME = os.getenv("INSTA_USERNAME")
 PASSWORD = os.getenv("INSTA_PASSWORD")
 
 # Proxy Configuration
-PROXY = "213.148.13.149:8080"
+PROXY = "60.183.57.76"
 
 # Set up proxy dictionary for requests
 PROXIES = {
@@ -121,7 +121,7 @@ def download_instagram_post_selenium(post_url, username, password):
 # ======= YOUTUBE & INSTAGRAM REELS DOWNLOAD (yt-dlp) =======
 def download_video(post_url, quality="best"):
     """Downloads videos using yt-dlp with proxy support."""
-    time.sleep(random.randint(10, 20))  
+    time.sleep(random.randint(10, 15))  
 
     unique_filename = f"video_{uuid.uuid4().hex}.mp4"
     video_path = os.path.join(DOWNLOADS_FOLDER, unique_filename)
@@ -134,17 +134,18 @@ def download_video(post_url, quality="best"):
     }
     video_format = quality_formats.get(quality, "bestvideo+bestaudio/best")
 
-    ydl_opts = {
-        "format": video_format,
-        "outtmpl": video_path,
-        "merge_output_format": "mp4",
-        "quiet": True,
-        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
-        "http_headers": {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
-        },
-        "proxy": f"http://{PROXY}"  # Proxy added here
+   ydl_opts = {
+    "format": video_format,
+    "outtmpl": video_path,
+    "merge_output_format": "mp4",
+    "quiet": True,
+    "proxy": "http://your-proxy-address:port",
+    "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
+    "http_headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
     }
+}
+
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
