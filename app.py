@@ -88,22 +88,19 @@ def index():
     return render_template("index.html")
 
 @app.route("/instagram", methods=["GET", "POST"])
-def instagram_downloader():
-    """Handles Instagram downloads."""
-    if request.method == "GET":
-        return render_template("instagram_downloader.html")  # Ensure this template exists
+def instagram_download():
+    username = request.form.get("username")
+    password = request.form.get("password")
+    url = request.form.get("url")
+    
+    # Your download logic here
+    success = True  # Replace with actual success condition
+    file_url = "/static/downloads/video.mp4"  # Replace with actual file path
 
-    post_url = request.form.get("url")  # Match the name in the form
-
-    if not post_url:
-        return jsonify({"success": False, "error": "No URL provided"}), 400
-
-    filepath = download_instagram_post_playwright(post_url)
-
-    if filepath:
-        return jsonify({"success": True, "file_url": f"/downloads/{os.path.basename(filepath)}"})
+    if success:
+        return jsonify({"success": True, "file_url": file_url})
     else:
-        return jsonify({"success": False, "error": "Instagram post could not be downloaded."})
+        return jsonify({"success": False})
 
 @app.route("/video", methods=["POST"])
 def video_downloader():
