@@ -177,10 +177,11 @@ def video_downloader():
     if video_url:
         file_path = download_video(video_url, quality)
         if file_path:
-            return send_file(file_path, as_attachment=True)
+            return jsonify({"success": True, "file": file_path})
         else:
-            return "Error: Video could not be downloaded.", 500
+            return jsonify({"error": "Video could not be downloaded."}), 500
 
+    return jsonify({"error": "Invalid request."}), 400
     return render_template("index.html")
 
 if __name__ == "__main__":
