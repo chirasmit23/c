@@ -37,6 +37,33 @@
     </style>
 
 <body>
+    <script>
+    function downloadPost(event) {
+        event.preventDefault();
+        let formData = new FormData(document.getElementById("downloadForm"));
+
+        fetch("/instagram", {  // Change endpoint to /download_post
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("Post Downloaded Successfully!");
+                window.location.href = data.file_url; // Redirect to download the file
+            } else {
+                alert("Error: " + data.error);
+            }
+        })
+        .catch(error => console.error("Error:", error));
+    }
+</script>
+
+<form id="downloadForm" onsubmit="downloadPost(event)">
+    <input type="text" name="post_url" placeholder="Enter Instagram Post URL" required>
+    <button type="submit">Download Post</button>
+</form>
+
     <nav>
         <button id="postDownloaderButton">Insta-Fb Post Downloader</button>
     </nav>
