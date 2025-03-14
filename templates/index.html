@@ -55,6 +55,35 @@
     </style>
 </head>
 <body>
+    <script>
+    function downloadVideo(event) {
+        event.preventDefault();
+        let formData = new FormData(document.getElementById("downloadForm"));
+
+        fetch("/video", {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("Download complete! Reloading...");
+                setTimeout(() => {
+                    location.reload();  // Automatically reloads the page
+                }, 2000); // Delay reload for 2 seconds
+            } else {
+                alert("Error: " + data.error);
+            }
+        })
+        .catch(error => console.error("Error:", error));
+    }
+</script>
+
+<form id="downloadForm" onsubmit="downloadVideo(event)">
+    <input type="text" name="video_url" placeholder="Enter Video URL" required>
+    <button type="submit">Download</button>
+</form>
+
     <nav>
         <a href="/instagram" id="postDownloaderButton" class="btn btn-secondary no-underline">Instagram Post Downloader</a>
 
@@ -88,34 +117,5 @@
     </div>
     <div style="height: 70px;"></div> <!-- Adds 70px gap -->
     <h2 class="thank-you">Thanks for visiting chiros - created by Chirasmit</h2>
-    <script>
-       
-        document.getElementById("videoForm").addEventListener("submit", function(event) {
-            event.preventDefault();
-
-            let videoUrl = document.getElementById("videoUrl").value;
-            let quality = document.getElementById("quality").value;
-            let videoMessage = document.getElementById("videoMessage");
-
-            videoMessage.innerHTML = "Processing...";
-
-            fetch("/video", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: "video_url=" + encodeURIComponent(videoUrl) + "&quality=" + encodeURIComponent(quality)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    videoMessage.innerHTML = `<a href="${data.file_url}" download>Download File</a>`;
-                } else {
-                    videoMessage.innerHTML = "Download failed. Try again.";
-                }
-            })
-            .catch(error => {
-                videoMessage.innerHTML = "Error occurred!";
-            });
-        });
-    </script>
 </body>
 </html>
