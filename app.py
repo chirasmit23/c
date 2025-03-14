@@ -87,7 +87,7 @@ def download_video(post_url, quality="best"):
 def index():
     return render_template("index.html")
 
-@app.route("/instagram", methods=["POST"])
+@app.route("/instagram", methods=["GET","POST"])
 def instagram_download():
     username = request.form.get("username")
     password = request.form.get("password")
