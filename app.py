@@ -1,82 +1,136 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, send_file, jsonify
 import yt_dlp
 import os
-import random
+import uuid
+import time
 import requests
-from playwright.sync_api import sync_playwright
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from dotenv import load_dotenv  
 from urllib.parse import urlparse
 
 # Initialize Flask App
 app = Flask(__name__, template_folder="templates")
 
-# Proxy Configuration (Optional)
-PROXY = "60.183.57.76"
-PROXIES = {"http": f"http://{PROXY}", "https": f"http://{PROXY}"}
+# Load Instagram Credentials Securely
+load_dotenv()
+USERNAME = os.getenv("INSTA_USERNAME")
+PASSWORD = os.getenv("INSTA_PASSWORD")
 
-# ======= INSTAGRAM DOWNLOAD (PLAYWRIGHT) =======
-def get_instagram_media_url(post_url):
-    """Uses Playwright to extract the direct Instagram video/image URL."""
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context()
-        page = context.new_page()
-        
-        page.set_extra_http_headers({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-        })
+if not USERNAME or not PASSWORD:
+    raise ValueError("Instagram username or password not set in .env file")
 
-        page.goto(post_url, timeout=60000)
-        media_url = None
-        try:
-            media_url = page.locator("video").get_attribute("src")
-            if not media_url:
-                media_url = page.locator("img").get_attribute("src")
-        except Exception as e:
-            print(f"Error extracting media URL: {e}")
-        
-        browser.close()
-        return media_url
+# Folder for downloads
+DOWNLOADS_FOLDER = os.path.join(os.getcwd(), "downloads")
+os.makedirs(DOWNLOADS_FOLDER, exist_ok=True)
 
-# ======= YOUTUBE & INSTAGRAM REELS DOWNLOAD (yt-dlp) =======
-def get_video_url(post_url):
-    """Extracts the direct video URL using yt-dlp without downloading."""
-    ydl_opts = {
-        "quiet": True,
-        "proxy": f"http://{PROXY}",
-        "format": "best",
-        "simulate": True,
-        "get_url": True,
-    }
+def download_instagram_post(post_url, username, password):
+    """Automates Instagram login and fetches media URL."""
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless")  # Run in background
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            result = ydl.extract_info(post_url, download=False)
-            return result.get("url")
+        driver.get("https://www.instagram.com/accounts/login/")
+        time.sleep(5)
+        driver.find_element(By.NAME, "username").send_keys(username)
+        driver.find_element(By.NAME, "password").send_keys(password)
+        driver.find_element(By.XPATH, "//button[@type='submit']").click()
+        time.sleep(5)
+
+        driver.get(post_url)
+        time.sleep(5)
+        try:
+            media_url = driver.find_element(By.TAG_NAME, "video").get_attribute("src")
+            if not media_url:
+                media_url = driver.find_element(By.TAG_NAME, "img").get_attribute("src")
+        except Exception as e:
+            print(f"Error fetching media: {e}")
+            media_url = None
+
+        if not media_url:
+            return None
+
+        # Save media
+        filename = os.path.basename(urlparse(media_url).path)
+        filepath = os.path.join(DOWNLOADS_FOLDER, filename)
+
+        with open(filepath, "wb") as file:
+            file.write(requests.get(media_url).content)
+
+        return filepath
+
     except Exception as e:
-        print(f"Error fetching video URL: {e}")
+        print(f"Error downloading Instagram post: {e}")
         return None
 
-# ======= FLASK ROUTES =======
-@app.route("/")
+    finally:
+        driver.quit()
+
+def download_video(post_url, quality="best"):
+    """Downloads a video from YouTube or any supported site using yt-dlp."""
+    unique_filename = f"video_{uuid.uuid4().hex}.mp4"
+    video_path = os.path.join(DOWNLOADS_FOLDER, unique_filename)
+
+    quality_formats = {
+        "1080": "bestvideo[height<=1080]+bestaudio/best",
+        "720": "bestvideo[height<=720]+bestaudio/best",
+        "480": "bestvideo[height<=480]+bestaudio/best",
+        "best": "bestvideo+bestaudio/best"
+    }
+    video_format = quality_formats.get(quality, "bestvideo+bestaudio/best")
+
+    ydl_opts = {
+        "format": video_format,
+        "outtmpl": video_path,
+        "merge_output_format": "mp4",
+        "quiet": True,
+        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}]
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([post_url])
+        return video_path
+    except Exception as e:
+        print(f"Download Error: {e}")
+        return None
+
+# Flask Routes
+@app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html")
+    return render_template("index.html")     
 
 @app.route("/instagram", methods=["POST"])
 def instagram_downloader():
     post_url = request.form.get("url")
-    media_url = get_instagram_media_url(post_url)
-    if media_url:
-        return jsonify({"media_url": media_url})
-    else:
-        return jsonify({"error": "Could not extract media URL"}), 500
 
+    filepath = download_instagram_post(post_url, USERNAME, PASSWORD)
+    if filepath:
+        return send_file(filepath, as_attachment=True)
+    else:
+        return jsonify({"error": "Could not download Instagram post"}), 500
+    return render_template("instagram_downloader.html")  
 @app.route("/video", methods=["POST"])
 def video_downloader():
     video_url = request.form.get("video_url")
-    direct_url = get_video_url(video_url)
-    if direct_url:
-        return jsonify({"direct_url": direct_url})
-    else:
-        return jsonify({"error": "Could not fetch video URL"}), 500
-    return render_template("index.html")
+    quality = request.form.get("quality", "best")  # Default to best quality
+
+    print(f"Downloading: {video_url} at {quality}p")
+
+    if video_url:
+        file_path = download_video(video_url, quality)
+        if file_path:
+            return send_file(file_path, as_attachment=True)
+        else:
+            return jsonify({"error": "Could not download video"}), 500
+    return jsonify({"error": "Invalid video URL"}), 400
+    return render_template("index.html")  
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
