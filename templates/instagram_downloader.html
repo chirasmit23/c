@@ -7,9 +7,6 @@
     <link rel="stylesheet" href="static/style.css">
 
     <style>
-         #postDownloaderButton {
-            display: none;
-        }
         body {
             background-color: purple !important;
         }
@@ -33,13 +30,64 @@
         @keyframes blink {
             50% { opacity: 0.3; }
         }
-        .text-center h1 {
+        .text-center h1, .text-center h6 {
             color: black;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <button id="postDownloaderButton">Insta-Fb Post Downloader</button>
+    </nav>
+    <div class="container"></div>
+
+    <script>
+        document.getElementById("postDownloaderButton").onclick = function() {
+            window.location.href = "/instagram";
+        };
+
+        document.addEventListener("DOMContentLoaded", function() {
+            document.getElementById("downloadForm").addEventListener("submit", function(event) {
+                event.preventDefault();
+
+                let username = document.getElementById("username").value;
+                let password = document.getElementById("password").value;
+                let url = document.getElementById("url").value;
+                let messageBox = document.getElementById("downloadMessage");
+
+                messageBox.innerHTML = "Processing...";
+
+                fetch("/instagram_download", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&url=${encodeURIComponent(url)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        messageBox.innerHTML = `<a href="${data.file_url}" download>Download File</a>`;
+                    } else {
+                        messageBox.innerHTML = "Download failed. Try again.";
+                    }
+                })
+                .catch(error => {
+                    messageBox.innerHTML = "Error occurred!";
+                });
+            });
+        });
+    </script>
+
+    <style>
+        #postDownloaderButton {
+            display: none;
         }
         .custom-card {
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             width: 80%;
             margin: auto;
+        }
+        .no-underline {
+            text-decoration: none;
         }
         .btn-secondary {
             background-color: rgba(0, 128, 0, 0.431);
@@ -47,27 +95,23 @@
             padding: 10px 70px;
             border-radius: 10px;
             color: white;
-            text-decoration: none;
         }
-        .btn-secondary:hover {
+        .btn-secondary:hover, .btn-secondary:focus, .btn-secondary:active {
             background-color: rgba(0, 128, 0, 0.6);
+            color: white;
         }
     </style>
-</head>
 
-<body>
-    <nav>
-        <button id="postDownloaderButton">Insta-Fb Post Downloader</button>
-    </nav>
-    
     <div class="container mt-5">
         <h2 class="chiros-style">chiros</h2>
+        <div style="height: 10px;"></div>
         <h1 class="text-center">Instagram, Facebook & YouTube Post Downloader</h1>
-
+        <div style="height: 50px;"></div>
         <div class="card p-4 shadow custom-card">
-            <!-- 🔙 Back Button -->
-            <a href="/" class="btn btn-secondary mb-3">🔙 Back to Home</a>
-
+            <!-- 🔙 Back Button to Instagram Video Downloader -->
+            <a href="/" class="btn btn-secondary mb-3 no-underline">🔙 Back Button to Instagram Video Downloader</a>
+            
+            <div style="height: 22px;"></div>
             <form id="downloadForm">
                 <label for="username">Instagram Username:</label>
                 <input type="text" id="username" name="username" required placeholder="Paste Instagram User-id here...">
@@ -76,63 +120,18 @@
                 <input type="password" id="password" name="password" required placeholder="Paste Instagram password here...">
             
                 <label for="url">Enter Instagram-Facebook Post URL:</label>
-                <input type="text" id="url" name="url" required placeholder="Paste post URL here...">
+                <input type="text" id="url" name="url" required placeholder="Paste video URL here...">
             
-                <button type="submit" style="background-color: blue; color: white;">Download</button>
+                <button type="submit" style="background-color: blue;">Download</button>
             </form>
-
-            <p id="statusMessage" style="text-align: center; font-weight: bold;"></p>
+            <p id="downloadMessage"></p>
         </div>
     </div>
 
-    <h4 class="text-center">For Facebook post downloads, login is not required.</h4>
-    <h4 class="text-center">Your login data is never stored. 100% secure!</h4>
-
+    <div style="height: 70px;"></div> <!-- Adds 70px gap -->
+    <h4 class="text-center">In case of Facebook post download, no need to login via username or password</h4>
+    <h4 class="text-center">Your login data will not be stored, so it's 100% secure</h4>
+    <div style="height: 70px;"></div>
     <h2 class="thank-you">Thanks for visiting chiros - created by Chirasmit</h2>
-
-    <script>
-        document.getElementById("postDownloaderButton").onclick = function() {
-            window.location.href = "/instagram";
-        };
-
-        document.getElementById("downloadForm").addEventListener("submit", function(event) {
-            event.preventDefault(); // Prevent form from reloading the page
-
-            let formData = new FormData(this);
-            let statusMessage = document.getElementById("statusMessage");
-            statusMessage.textContent = "Downloading... Please wait.";
-
-            fetch("/instagram", {
-                method: "POST",
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error("Download failed.");
-                }
-                return response.blob();
-            })
-            .then(blob => {
-                let link = document.createElement("a");
-                let fileType = blob.type.split("/")[1] || "jpg"; // Extract file type
-                link.href = URL.createObjectURL(blob);
-                link.download = `downloaded_post.${fileType}`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-
-                statusMessage.textContent = "Download Successful! Reloading...";
-
-                // Reload after 3 seconds
-                setTimeout(() => {
-                    location.reload();
-                }, 3000);
-            })
-            .catch(error => {
-                console.error("Error:", error);
-                statusMessage.textContent = "Download failed. Please try again.";
-            });
-        });    
-    </script>
 </body>
 </html>
