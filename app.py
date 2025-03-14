@@ -64,13 +64,19 @@ def index():
 def instagram_downloader():
     post_url = request.form.get("url")
     media_url = get_instagram_media_url(post_url)
-    return jsonify({"media_url": media_url}) if media_url else jsonify({"error": "Could not extract media URL"}), 500
+    if media_url:
+        return jsonify({"media_url": media_url})
+    else:
+        return jsonify({"error": "Could not extract media URL"}), 500
 
 @app.route("/video", methods=["POST"])
 def video_downloader():
     video_url = request.form.get("video_url")
     direct_url = get_video_url(video_url)
-    return jsonify({"direct_url": direct_url}) if direct_url else jsonify({"error": "Could not fetch video URL"}), 500
- return render_template("index.html")
+    if direct_url:
+        return jsonify({"direct_url": direct_url})
+    else:
+        return jsonify({"error": "Could not fetch video URL"}), 500
+    return render_template("index.html")
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
