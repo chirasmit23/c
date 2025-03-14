@@ -3,133 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chiros-All Video Downloader</title> 
-    <link rel="stylesheet" href="static/style.css">
+    <title>Video Downloader</title>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            function handleFormSubmission(formId, endpoint, messageId) {
+                const form = document.getElementById(formId);
+                const message = document.getElementById(messageId);
 
-    <style>
-        body {
-            background-color: purple !important;
-        }
-        .card {
-            background-color: plum !important;
-        }
-        .chiros-style {
-            color: chartreuse;
-            font-size: 4em;
-            font-weight: bold;
-            font-family: 'elegant', Elegant;
-            text-align: center;
-        }
-        .thank-you {
-            color: yellow;
-            text-align: center;
-            font-size: 25px;
-            font-weight: bold;
-            animation: blink 1.5s infinite alternate;
-        }
-        @keyframes blink {
-            50% { opacity: 0.3; }
-        }
-        .text-center h1, .text-center h6 {
-            color: black;
-        }
-        .custom-card {
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            width: 80%;
-            margin: auto;
-        }
-        .no-underline {
-            text-decoration: none;
-        }
-        .btn-secondary {
-            background-color: rgba(0, 128, 0, 0.431);
-            font-size: 1.1em;
-            padding: 10px 70px;
-            border-radius: 10px;
-            color: white;
-        }
-        .btn-secondary:hover, .btn-secondary:focus, .btn-secondary:active {
-            background-color: rgba(0, 128, 0, 0.6);
-            color: white;
-        }
-    </style>
+                form.addEventListener("submit", function (event) {
+                    event.preventDefault(); // Prevent page refresh
+
+                    let formData = new FormData(form);
+                    message.textContent = "Downloading... Please wait.";
+
+                    fetch(endpoint, {
+                        method: "POST",
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            let link = document.createElement("a");
+                            link.href = data.file_url;
+                            link.download = "downloaded_media.mp4";
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+
+                            message.textContent = "Download successful!";
+                        } else {
+                            message.textContent = "Error: " + (data.error || "Download failed.");
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error:", error);
+                        message.textContent = "Download failed. Try again.";
+                    });
+                });
+            }
+
+            handleFormSubmission("instagramDownloadForm", "/instagram", "instaStatus");
+            handleFormSubmission("videoDownloadForm", "/video", "videoStatus");
+        });
+    </script>
 </head>
 <body>
-    <nav>
-        <a href="/instagram" id="postDownloaderButton" class="btn btn-secondary no-underline">Instagram Post Downloader</a>
-    </nav>
 
-    <div class="container mt-5">
-        <h2 class="chiros-style">chiros</h2>
-        <div style="height: 10px;"></div>
-        <h1 class="text-center">Instagram, Facebook & YouTube Videos Downloader</h1>
-        <div style="height: 45px;"></div>
-        <div class="card p-4 shadow">
-            <form id="downloadForm">
-                <div class="mb-3">
-                    <label for="video_url" class="form-label">Enter Video URL:</label>
-                    <input type="text" id="video_url" name="video_url" class="form-control" required placeholder="Paste video URL here...">
-                </div>
-                
-                <!-- Video Quality Selection -->
-                <div class="mb-3">
-                    <label for="quality" class="form-label mt-3">Select Video Quality:</label>
-                    <select id="quality" name="quality" class="form-control">
-                        <option value="best">Best Available</option>
-                        <option value="1080">1080p</option>
-                        <option value="720">720p</option>
-                        <option value="480">480p</option>
-                    </select>
-                </div>
+    <h1>Instagram Post Downloader</h1>
+    <form id="instagramDownloadForm">
+        <label for="insta_url">Enter Instagram Post URL:</label>
+        <input type="text" id="insta_url" name="url" required>
+        <button type="submit">Download Instagram Post</button>
+    </form>
+    <p id="instaStatus"></p>
 
-                <button type="submit" class="btn btn-primary mt-3 w-100" style="background-color: blue;">Download</button>
-            </form>
-        </div>
-    </div>
+    <h1>Video Downloader (YouTube, Reels, etc.)</h1>
+    <form id="videoDownloadForm">
+        <label for="video_url">Enter Video URL:</label>
+        <input type="text" id="video_url" name="video_url" required>
+        <label for="quality">Select Quality:</label>
+        <select id="quality" name="quality">
+            <option value="best">Best</option>
+            <option value="1080">1080p</option>
+            <option value="720">720p</option>
+            <option value="480">480p</option>
+        </select>
+        <button type="submit">Download Video</button>
+    </form>
+    <p id="videoStatus"></p>
 
-    <div style="height: 70px;"></div> <!-- Adds 70px gap -->
-    <h2 class="thank-you">Thanks for visiting chiros - created by Chirasmit</h2>
-
-    <script>
-        document.getElementById("downloadForm").addEventListener("submit", function(event) {
-    event.preventDefault(); // Prevent page reload
-
-    let formData = new FormData(this);
-    let statusMessage = document.getElementById("statusMessage");
-    statusMessage.textContent = "Downloading... Please wait.";
-
-    fetch("/instagram", {
-        method: "POST",
-        body: formData
-    })
-    .then(response => {
-        console.log("Raw Response:", response); // Debugging
-        return response.json(); // Expect JSON response
-    })
-    .then(data => {
-        console.log("Parsed Data:", data); // Debugging
-
-        if (!data.file_url) {
-            throw new Error("No file URL provided by server.");
-        }
-
-        let link = document.createElement("a");
-        link.href = data.file_url;
-        link.download = "downloaded_post.mp4"; // Ensure proper filename
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        statusMessage.textContent = "Download Successful! Reloading...";
-        setTimeout(() => location.reload(), 3000);
-    })
-    .catch(error => {
-        console.error("Error:", error);
-        statusMessage.textContent = "Download failed. Please try again.";
-    });
-});
-Error:", error));
-});   
-    </script>
 </body>
 </html>
