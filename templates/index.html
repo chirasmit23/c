@@ -92,9 +92,10 @@
             <form action="/video" method="post">
                 <div class="mb-3">
                    <form id="downloadForm" onsubmit="downloadVideo(event)">
-    <input type="text" name="video_url" placeholder="Enter Video URL" required>
-    <button type="submit">Download</button>
-</form>
+   
+     <label for="video_url" class="form-label">Enter Video URL:</label>
+                    <input type="text" name="video_url" class="form-control" required placeholder="Paste video URL here...">
+    </form>
                 </div>
                 
                 <!-- Video Quality Selection -->
