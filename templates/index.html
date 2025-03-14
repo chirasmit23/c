@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chiros-All Video Downloader</title> <link rel="stylesheet" href="static/style.css">
+
+
     <style>
         body {
             background-color: purple !important;
@@ -53,32 +55,6 @@
     </style>
 </head>
 <body>
-    <script>
-    function downloadVideo(event) {
-        event.preventDefault();
-        let formData = new FormData(document.getElementById("downloadForm"));
-
-        fetch("/video", {
-            method: "POST",
-            body: formData
-        })
-        .then(response => response.text())  // Convert to text first
-.then(data => {
-    try {
-        let jsonData = JSON.parse(data); // Try parsing JSON
-        if (jsonData.success) {
-            alert("Download complete! Reloading...");
-            setTimeout(() => location.reload(), 2000);
-        } else {
-            alert("Error: " + jsonData.error);
-        }
-    } catch (error) {
-        console.error("Response is not valid JSON:", data);
-    }
-})
-.catch(error => console.error("Error:", error));
-</script>
-
     <nav>
         <a href="/instagram" id="postDownloaderButton" class="btn btn-secondary no-underline">Instagram Post Downloader</a>
 
@@ -91,11 +67,8 @@
         <div class="card p-4 shadow">
             <form action="/video" method="post">
                 <div class="mb-3">
-                   <form id="downloadForm" onsubmit="downloadVideo(event)">
-   
-     <label for="video_url" class="form-label">Enter Video URL:</label>
+                    <label for="video_url" class="form-label">Enter Video URL:</label>
                     <input type="text" name="video_url" class="form-control" required placeholder="Paste video URL here...">
-    </form>
                 </div>
                 
                 <!-- Video Quality Selection -->
