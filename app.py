@@ -42,7 +42,7 @@ def download_instagram_post_playwright(post_url):
         page = context.new_page()
 
         page.set_extra_http_headers({
-           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
         })
 
         page.goto(post_url, timeout=60000)
@@ -134,18 +134,18 @@ def download_video(post_url, quality="best"):
     }
     video_format = quality_formats.get(quality, "bestvideo+bestaudio/best")
 
-   ydl_opts = {
-    "format": video_format,
-    "outtmpl": video_path,
-    "merge_output_format": "mp4",
-    "quiet": True,
-    "proxy": "http://60.183.57.76",
-    "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
-    "http_headers": {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+    # ✅ FIXED INDENTATION ERROR HERE
+    ydl_opts = {
+        "format": video_format,
+        "outtmpl": video_path,
+        "merge_output_format": "mp4",
+        "quiet": True,
+        "proxy": f"http://{PROXY}",
+        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+        }
     }
-  }
-
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -192,7 +192,6 @@ def video_downloader():
             return jsonify({"error": "Video could not be downloaded."}), 500
 
     return jsonify({"error": "Invalid request."}), 400
-    return render_template("index.html")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
