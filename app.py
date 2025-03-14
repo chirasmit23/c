@@ -87,22 +87,24 @@ def download_video(post_url, quality="best"):
 def index():
     return render_template("index.html")
 
-@app.route("/instagram", methods=["POST"])
+@app.route("/instagram", methods=["GET", "POST"])
 def instagram_downloader():
     """Handles Instagram downloads."""
-    post_url = request.form.get("video_url")  # Match the name in the form
- # Use `.get()` to prevent KeyError
+    if request.method == "GET":
+        return render_template("instagram_downloader.html")  # Ensure this template exists
+
+    post_url = request.form.get("url")  # Match the name in the form
 
     if not post_url:
         return jsonify({"success": False, "error": "No URL provided"}), 400
 
     filepath = download_instagram_post_playwright(post_url)
-    
+
     if filepath:
         return jsonify({"success": True, "file_url": f"/downloads/{os.path.basename(filepath)}"})
     else:
         return jsonify({"success": False, "error": "Instagram post could not be downloaded."})
-    return render_template("instagram_downloader.html")
+
 @app.route("/video", methods=["POST"])
 def video_downloader():
     """Handles YouTube & Instagram reels downloads."""
