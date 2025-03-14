@@ -87,7 +87,7 @@ def download_video(post_url, quality="best"):
 def index():
     return render_template("index.html")
 
-@app.route("/instagram", methods=["GET", "POST"])
+@app.route("/instagram", methods=["POST"])
 def instagram_download():
     username = request.form.get("username")
     password = request.form.get("password")
@@ -101,7 +101,7 @@ def instagram_download():
         return jsonify({"success": True, "file_url": file_url})
     else:
         return jsonify({"success": False})
-
+    return render_template("instagram_downloader.html")
 @app.route("/video", methods=["POST"])
 def video_downloader():
     """Handles YouTube & Instagram reels downloads."""
