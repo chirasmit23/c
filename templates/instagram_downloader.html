@@ -39,7 +39,41 @@
     <nav>
         <button id="postDownloaderButton">Insta-Fb Post Downloader</button>
     </nav>
-    <div class="container"></div>
+
+    <div class="container mt-5">
+        <h2 class="chiros-style">chiros</h2>
+        <div style="height: 10px;"></div>
+        <h1 class="text-center">Instagram, Facebook & YouTube Post Downloader</h1>
+        <div style="height: 50px;"></div>
+        
+        <div class="card p-4 shadow custom-card">
+            <!-- 🔙 Back Button to Instagram Video Downloader -->
+            <a href="/" class="btn btn-secondary mb-3 no-underline">🔙 Back Button to Instagram Video Downloader</a>
+            
+            <div style="height: 22px;"></div>
+            
+            <form id="downloadForm">
+                <label for="username">Instagram Username:</label>
+                <input type="text" id="username" name="username" required placeholder="Paste Instagram User-id here...">
+            
+                <label for="password">Instagram Password:</label>
+                <input type="password" id="password" name="password" required placeholder="Paste Instagram password here...">
+            
+                <label for="url">Enter Instagram-Facebook Post URL:</label>
+                <input type="text" id="url" name="url" required placeholder="Paste video URL here...">
+            
+                <button type="submit" style="background-color: blue;">Download</button>
+            </form>
+            
+            <p id="downloadMessage"></p> <!-- Display download status here -->
+        </div>
+    </div>
+
+    <div style="height: 70px;"></div> 
+    <h4 class="text-center">In case of Facebook post download, no need to login via username or password</h4>
+    <h4 class="text-center">Your login data will not be stored, so it's 100% secure</h4>
+    <div style="height: 70px;"></div>
+    <h2 class="thank-you">Thanks for visiting chiros - created by Chirasmit</h2>
 
     <script>
         document.getElementById("postDownloaderButton").onclick = function() {
@@ -102,36 +136,5 @@
         }
     </style>
 
-    <div class="container mt-5">
-        <h2 class="chiros-style">chiros</h2>
-        <div style="height: 10px;"></div>
-        <h1 class="text-center">Instagram, Facebook & YouTube Post Downloader</h1>
-        <div style="height: 50px;"></div>
-        <div class="card p-4 shadow custom-card">
-            <!-- 🔙 Back Button to Instagram Video Downloader -->
-            <a href="/" class="btn btn-secondary mb-3 no-underline">🔙 Back Button to Instagram Video Downloader</a>
-            
-            <div style="height: 22px;"></div>
-            <form id="downloadForm">
-                <label for="username">Instagram Username:</label>
-                <input type="text" id="username" name="username" required placeholder="Paste Instagram User-id here...">
-            
-                <label for="password">Instagram Password:</label>
-                <input type="password" id="password" name="password" required placeholder="Paste Instagram password here...">
-            
-                <label for="url">Enter Instagram-Facebook Post URL:</label>
-                <input type="text" id="url" name="url" required placeholder="Paste video URL here...">
-            
-                <button type="submit" style="background-color: blue;">Download</button>
-            </form>
-            <p id="downloadMessage"></p>
-        </div>
-    </div>
-
-    <div style="height: 70px;"></div> <!-- Adds 70px gap -->
-    <h4 class="text-center">In case of Facebook post download, no need to login via username or password</h4>
-    <h4 class="text-center">Your login data will not be stored, so it's 100% secure</h4>
-    <div style="height: 70px;"></div>
-    <h2 class="thank-you">Thanks for visiting chiros - created by Chirasmit</h2>
 </body>
 </html>
