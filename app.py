@@ -139,12 +139,12 @@ def download_video(post_url, quality="best"):
     "outtmpl": video_path,
     "merge_output_format": "mp4",
     "quiet": True,
-    "proxy": "http://your-proxy-address:port",
+    "proxy": "http://60.183.57.76",
     "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
     "http_headers": {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
     }
-}
+  }
 
 
     try:
