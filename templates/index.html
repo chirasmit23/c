@@ -89,32 +89,7 @@
     <div style="height: 70px;"></div> <!-- Adds 70px gap -->
     <h2 class="thank-you">Thanks for visiting chiros - created by Chirasmit</h2>
     <script>
-        document.getElementById("instagramForm").addEventListener("submit", function(event) {
-            event.preventDefault();
-            
-            let instaUrl = document.getElementById("instaUrl").value;
-            let instaMessage = document.getElementById("instaMessage");
-
-            instaMessage.innerHTML = "Processing...";
-
-            fetch("/instagram", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: "url=" + encodeURIComponent(instaUrl)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    instaMessage.innerHTML = `<a href="${data.file_url}" download>Download File</a>`;
-                } else {
-                    instaMessage.innerHTML = "Download failed. Try again.";
-                }
-            })
-            .catch(error => {
-                instaMessage.innerHTML = "Error occurred!";
-            });
-        });
-
+       
         document.getElementById("videoForm").addEventListener("submit", function(event) {
             event.preventDefault();
 
