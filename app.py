@@ -121,21 +121,27 @@ def download_video(post_url, quality):
     }
     video_format = quality_formats.get(quality, "bestvideo+bestaudio/best")
 
+    
+    # Convert "shorts" URL to "embed" format
+    url = url.replace("shorts/", "embed/") if "shorts" in url else url
+    
     ydl_opts = {
-        "format": video_format,
-        "outtmpl": video_path,
-        "merge_output_format": "mp4",
-        "quiet": True,
-        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
-        "nocheckcertificate": True
+        'format': 'best',
+        'force_ipv4': True,
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36',
+            'Referer': 'https://www.youtube.com/',
+            'Accept-Language': 'en-US,en;q=0.9',
+        },
+        'quiet': True,
+        'no_warnings': False,
     }
-
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([post_url])
-        return video_path
+            info = ydl.extract_info(url, download=True)
+            return info
     except Exception as e:
-        print(f"Download Error: {e}")
+        print(f"Error: {e}")
         return None
 
 # ======= FLASK ROUTES =======
