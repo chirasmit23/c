@@ -1,5 +1,5 @@
 services:
-  - name: no-2
+  - name: no-3
     type: web
     env: python
     plan: free
