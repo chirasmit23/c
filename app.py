@@ -109,12 +109,6 @@ def download_instagram_post_selenium(post_url, username, password):
         print(f"Error downloading Instagram post: {e}")
         driver.quit()
         return None
-import os
-import uuid
-import yt_dlp
-
-# Define your downloads folder (e.g., "downloads/")
-DOWNLOADS_FOLDER = "downloads"
 
 def download_video(post_url, quality):
     # Define the downloads directory
@@ -122,6 +116,7 @@ DOWNLOADS_FOLDER = "downloads"
 os.makedirs(DOWNLOADS_FOLDER, exist_ok=True)  # Ensure directory exists
 
 def download_video(post_url, quality):
+    time.sleep(5)  
     # Generate a unique filename and path
     unique_filename = f"downloaded_video_{uuid.uuid4().hex}.%(ext)s"  # Dynamic extension
     video_path = os.path.join(DOWNLOADS_FOLDER, unique_filename)
