@@ -135,30 +135,31 @@ def download_video(post_url, quality):
     else:
         modified_url = post_url
 
-    # Randomize User-Agent to avoid bot detection
-    user_agents = [
-        'com.google.android.youtube/19.05.36 (Linux; U; Android 13)',
-        'Mozilla/5.0 (Android 13; Mobile; rv:109.0) Gecko/118.0 Firefox/118.0',
-    ]
+    # Use Playwright to fetch cookies
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context()
+        page = context.new_page()
+        page.goto("https://www.youtube.com")
+        cookies = context.cookies()
+        browser.close()
 
     # Configure yt-dlp options
     ydl_opts = {
         'format': video_format,
         'outtmpl': video_path,
         'http_headers': {
-            'User-Agent': random.choice(user_agents),
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             'Referer': 'https://www.youtube.com/',
         },
-        # Automatically fetch cookies from the browser
-        'cookiesfrombrowser': ('chrome',),  # Use 'firefox' or 'edge' if needed
-        'extractor_args': {
-            'youtube': {
-                'player_client': 'android',  # Spoof Android client
-                'player_skip': ['configs'],  # Skip age/consent pages
-            }
-        },
+        'cookiefile': 'cookies.txt',  # Save cookies to a file
         'quiet': True,
     }
+
+    # Save cookies to a file
+    with open('cookies.txt', 'w') as f:
+        for cookie in cookies:
+            f.write(f"{cookie['name']}={cookie['value']}\n")
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
