@@ -110,63 +110,38 @@ def download_instagram_post_selenium(post_url, username, password):
         driver.quit()
         return None
 
-DOWNLOADS_FOLDER = "downloads"
-os.makedirs(DOWNLOADS_FOLDER, exist_ok=True)  # Ensure directory exists
+def download_video(post_url, quality="best"):
+    """Downloads videos using yt-dlp for YouTube and Instagram reels."""
+    time.sleep(random.randint(10, 20))  # Delay to avoid rate limits
 
-def download_video(post_url, quality):
-    # Generate a unique filename and path
-    unique_filename = f"downloaded_video_{uuid.uuid4().hex}.%(ext)s"
+    unique_filename = f"video_{uuid.uuid4().hex}.mp4"
     video_path = os.path.join(DOWNLOADS_FOLDER, unique_filename)
 
-    # Define quality formats
     quality_formats = {
         "1080": "bestvideo[height<=1080]+bestaudio/best",
         "720": "bestvideo[height<=720]+bestaudio/best",
         "480": "bestvideo[height<=480]+bestaudio/best",
-        "best": "best"
+        "best": "bestvideo+bestaudio/best"
     }
+    video_format = quality_formats.get(quality, "bestvideo+bestaudio/best")
 
-    # Select the format based on user input
-    video_format = quality_formats.get(quality, "best")
-
-    # Handle YouTube Shorts URLs
-    if "youtube.com/shorts/" in post_url:
-        modified_url = post_url.replace("shorts/", "embed/")
-    else:
-        modified_url = post_url
-
-    # Use Playwright to fetch cookies
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context()
-        page = context.new_page()
-        page.goto("https://www.youtube.com")
-        cookies = context.cookies()
-        browser.close()
-
-    # Configure yt-dlp options
     ydl_opts = {
-        'format': video_format,
-        'outtmpl': video_path,
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Referer': 'https://www.youtube.com/',
-        },
-        'cookiefile': 'cookies.txt',  # Save cookies to a file
-        'quiet': True,
+        "format": video_format,
+        "outtmpl": video_path,
+        "merge_output_format": "mp4",
+        "quiet": True,
+        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+        }
     }
-
-    # Save cookies to a file
-    with open('cookies.txt', 'w') as f:
-        for cookie in cookies:
-            f.write(f"{cookie['name']}={cookie['value']}\n")
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(modified_url, download=True)
-            return video_path
+            ydl.download([post_url])
+        return video_path
     except Exception as e:
-        print(f"Download error: {e}")
+        print(f"Download Error: {e}")
         return None
 # ======= FLASK ROUTES =======
 @app.route("/", methods=["GET"])
