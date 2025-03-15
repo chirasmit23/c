@@ -149,10 +149,12 @@ def download_video(post_url, quality):
             'User-Agent': random.choice(user_agents),
             'Referer': 'https://www.youtube.com/',
         },
+        # Automatically fetch cookies from the browser
+        'cookiesfrombrowser': ('chrome',),  # Use 'firefox' or 'edge' if needed
         'extractor_args': {
             'youtube': {
-                'player_client': 'android',
-                'player_skip': 'configs',
+                'player_client': 'android',  # Spoof Android client
+                'player_skip': ['configs'],  # Skip age/consent pages
             }
         },
         'quiet': True,
