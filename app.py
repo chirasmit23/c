@@ -122,26 +122,27 @@ def download_video(post_url, quality):
     video_format = quality_formats.get(quality, "bestvideo+bestaudio/best")
 
     
-    # Convert "shorts" URL to "embed" format
-    url = url.replace("shorts/", "embed/") if "shorts" in url else url
-    
+    # Handle YouTube Shorts URLs
+    if "youtube.com/shorts/" in video_url:
+        modified_url = video_url.replace("shorts/", "embed/")
+    else:
+        modified_url = video_url
+
+    # Configure yt-dlp options
     ydl_opts = {
-        'format': 'best',
-        'force_ipv4': True,
+        'format': f'bestvideo[height<={quality}]+bestaudio/best[height<={quality}]',
+        'outtmpl': 'downloads/%(title)s.%(ext)s',
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36',
-            'Referer': 'https://www.youtube.com/',
-            'Accept-Language': 'en-US,en;q=0.9',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         },
-        'quiet': True,
-        'no_warnings': False,
     }
+
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            return info
+            info = ydl.extract_info(modified_url, download=True)
+            return ydl.prepare_filename(info)
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Download error: {e}")
         return None
 
 # ======= FLASK ROUTES =======
