@@ -126,8 +126,8 @@ def download_video(post_url, quality):
         "outtmpl": video_path,
         "merge_output_format": "mp4",
         "quiet": True,
-        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}]
-        "nocheckcertificate": True, 
+        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
+        "nocheckcertificate": True
     }
 
     try:
