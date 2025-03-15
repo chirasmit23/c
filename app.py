@@ -110,15 +110,12 @@ def download_instagram_post_selenium(post_url, username, password):
         driver.quit()
         return None
 
-def download_video(post_url, quality):
-    # Define the downloads directory
 DOWNLOADS_FOLDER = "downloads"
 os.makedirs(DOWNLOADS_FOLDER, exist_ok=True)  # Ensure directory exists
 
 def download_video(post_url, quality):
-    time.sleep(5)  
     # Generate a unique filename and path
-    unique_filename = f"downloaded_video_{uuid.uuid4().hex}.%(ext)s"  # Dynamic extension
+    unique_filename = f"downloaded_video_{uuid.uuid4().hex}.%(ext)s"
     video_path = os.path.join(DOWNLOADS_FOLDER, unique_filename)
 
     # Define quality formats
@@ -142,35 +139,29 @@ def download_video(post_url, quality):
     user_agents = [
         'com.google.android.youtube/19.05.36 (Linux; U; Android 13)',
         'Mozilla/5.0 (Android 13; Mobile; rv:109.0) Gecko/118.0 Firefox/118.0',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
     ]
 
     # Configure yt-dlp options
     ydl_opts = {
         'format': video_format,
-        'outtmpl': video_path,  # Use dynamic extension via %(ext)s
-        'merge_output_format': 'mp4',  # Force MP4 container
+        'outtmpl': video_path,
         'http_headers': {
             'User-Agent': random.choice(user_agents),
             'Referer': 'https://www.youtube.com/',
-            'Accept-Language': 'en-US,en;q=0.9',  # Added for bot avoidance
         },
         'extractor_args': {
             'youtube': {
-                'player_client': 'android',  # Spoof Android client
-                'player_skip': 'configs',  # Bypass age/consent pages
+                'player_client': 'android',
+                'player_skip': 'configs',
             }
         },
         'quiet': True,
-        'force_ipv4': True,  # Bypass network restrictions
-        'no_warnings': False,
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(modified_url, download=True)
-            final_path = ydl.prepare_filename(info).replace(".webm", ".mp4")  # Ensure .mp4 extension
-            return final_path
+            return video_path
     except Exception as e:
         print(f"Download error: {e}")
         return None
