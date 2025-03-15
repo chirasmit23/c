@@ -109,42 +109,53 @@ def download_instagram_post_selenium(post_url, username, password):
         print(f"Error downloading Instagram post: {e}")
         driver.quit()
         return None
+import os
+import uuid
+import yt_dlp
+
+# Define your downloads folder (e.g., "downloads/")
+DOWNLOADS_FOLDER = "downloads"
+
 def download_video(post_url, quality):
+    # Create a unique filename and path
     unique_filename = f"downloaded_video_{uuid.uuid4().hex}.mp4"
     video_path = os.path.join(DOWNLOADS_FOLDER, unique_filename)
 
+    # Define quality/format mappings
     quality_formats = {
         "1080": "bestvideo[height<=1080]+bestaudio/best",
         "720": "bestvideo[height<=720]+bestaudio/best",
         "480": "bestvideo[height<=480]+bestaudio/best",
-        "best": "bestvideo+bestaudio/best"
+        "best": "best"
     }
-    video_format = quality_formats.get(quality, "bestvideo+bestaudio/best")
 
-    
+    # Select the format based on user input
+    video_format = quality_formats.get(quality, "best")
+
     # Handle YouTube Shorts URLs
-    if "youtube.com/shorts/" in video_url:
-        modified_url = video_url.replace("shorts/", "embed/")
+    if "youtube.com/shorts/" in post_url:
+        modified_url = post_url.replace("shorts/", "embed/")
     else:
-        modified_url = video_url
+        modified_url = post_url
 
-    # Configure yt-dlp options
+    # Configure yt-dlp
     ydl_opts = {
-        'format': f'bestvideo[height<={quality}]+bestaudio/best[height<={quality}]',
-        'outtmpl': 'downloads/%(title)s.%(ext)s',
+        'format': video_format,
+        'outtmpl': video_path,
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Referer': 'https://www.youtube.com/',
         },
+        'quiet': True,
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(modified_url, download=True)
-            return ydl.prepare_filename(info)
+            ydl.download([modified_url])
+            return video_path
     except Exception as e:
-        print(f"Download error: {e}")
+        print(f"Error: {e}")
         return None
-
 # ======= FLASK ROUTES =======
 @app.route("/", methods=["GET"])
 def index():
