@@ -1,4 +1,17 @@
 services:
-  - name: no-19
+  - name: no-20
+    type: web
     env: python
-    startCommand: playwright install --with-deps && python app.py
+    plan: free
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+      playwright install --with-deps
+    startCommand: python app.py
+    envVars:
+      - key: INSTA_USERNAME
+        value: "your_username"
+      - key: INSTA_PASSWORD
+        value: "your_password"
+      - key: PORT
+        value: "10000"
