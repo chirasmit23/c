@@ -1,12 +1,12 @@
 services:
-  - name: no-21
+  - name: no-22
     type: web
     env: python
     plan: free
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
-      npx playwright install --with-deps chromium
+      playwright install chromium
     startCommand: python app.py
     envVars:
       - key: INSTA_USERNAME
