@@ -13,6 +13,8 @@ libsecret-1-0 libmanette-0.2-0 libgles2-mesa
 echo "Installing Python dependencies..."
 pip install --upgrade pip
 pip install -r requirements.txt
+pip install playwright
+playwright install
 
 echo "Installing Playwright with dependencies..."
 npx playwright install --with-deps chromium  # This is enough!
