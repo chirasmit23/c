@@ -32,3 +32,4 @@ yt-dlp==2025.2.19
 gunicorn
 playwright
 webdriver-manager==4.0.1  # Fixed for Linux, avoids pywin32 issue
+playwright-chromium
