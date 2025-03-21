@@ -33,3 +33,4 @@ gunicorn
 playwright
 webdriver-manager==4.0.1  # Fixed for Linux, avoids pywin32 issue
 playwright-chromium
+redis
