@@ -33,3 +33,4 @@ gunicorn
 webdriver-manager==4.0.1  # Fixed for Linux, avoids pywin32 issue
 ensta
 redis
+moviepy
