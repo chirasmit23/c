@@ -1,11 +1,13 @@
 from flask import Flask, render_template, request, send_file, jsonify
 import yt_dlp
 import os
+import json
 import uuid
+import time
 import requests
 import redis
 from dotenv import load_dotenv
-from ensta import Mobile  # Import Ensta API
+from urllib.parse import urlparse
 
 # Load environment variables
 load_dotenv()
@@ -23,7 +25,7 @@ redis_client = redis.Redis(
     decode_responses=True
 )
 
-# Instagram Credentials
+# Instagram Credentials (Securely loaded from .env)
 USERNAME = os.getenv("INSTA_USERNAME")
 PASSWORD = os.getenv("INSTA_PASSWORD")
 
@@ -34,56 +36,49 @@ app = Flask(__name__, template_folder="templates")
 DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
 os.makedirs(DOWNLOADS_FOLDER, exist_ok=True)
 
-# Initialize Ensta Mobile Client
-mobile = Mobile(USERNAME, PASSWORD)
-
 # Rate Limiting Function
 def is_rate_limited(ip, limit=10, duration=60):
     if redis_client:
         key = f"rate_limit:{ip}"
-        try:
-            count = redis_client.incr(key)
-            redis_client.expire(key, duration)
-            return count > limit
-        except Exception:
-            return False
+        with redis_client.pipeline() as pipe:
+            try:
+                pipe.incr(key)
+                pipe.expire(key, duration)
+                count = int(pipe.execute()[0])
+                return count > limit
+            except Exception as e:
+                print(f"Redis Error: {e}")
+                return False
     return False
 
-# Function to Fetch Instagram Media URLs
-def fetch_instagram_media(post_url):
+# Function to Download Instagram Post using yt-dlp (Better than Selenium)
+import json
+
+def download_instagram_post(post_url):
+    unique_filename = f"instagram_{uuid.uuid4().hex}.mp4"
+    file_path = os.path.join(DOWNLOADS_FOLDER, unique_filename)
+    metadata_file = file_path.replace(".mp4", ".json")
+
+    ydl_opts = {
+        "format": "best",
+        "outtmpl": file_path,
+        "writeinfojson": True,  #  Save metadata to JSON
+    }
+
     try:
-        media = mobile.post(post_url)
-        if media.is_video:
-            return [media.video_url]
-        elif media.is_image:
-            return [media.image_url]
-        elif media.is_album:
-            return media.album_urls
-    except Exception:
-        pass
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(post_url, download=True)
+            with open(metadata_file, "w", encoding="utf-8") as f:
+                json.dump(info, f, ensure_ascii=False)  #  Prevent encoding errors
+            print("Download Successful:", info["title"])
+        return file_path if os.path.exists(file_path) else None
+    except UnicodeEncodeError as e:
+        print(f"Encoding Error: {e}")
+    except Exception as e:
+        print(f"Instagram Download Error: {e}")
     return None
 
-# Function to Download Instagram Post
-def download_instagram_post(post_url):
-    urls = fetch_instagram_media(post_url)
-    if not urls:
-        return None
-    
-    downloaded_files = []
-    for url in urls:
-        ext = "mp4" if "video" in url else "jpg"
-        filename = f"instagram_{uuid.uuid4().hex}.{ext}"
-        file_path = os.path.join(DOWNLOADS_FOLDER, filename)
-
-        response = requests.get(url, stream=True)
-        if response.status_code == 200:
-            with open(file_path, "wb") as f:
-                for chunk in response.iter_content(1024):
-                    f.write(chunk)
-            downloaded_files.append(file_path)
-    return downloaded_files
-
-# Function to Download Video from Various Platforms
+# Function to Download Video (YouTube, Facebook, etc.)
 def download_video(post_url, quality):
     unique_filename = f"video_{uuid.uuid4().hex}.mp4"
     video_path = os.path.join(DOWNLOADS_FOLDER, unique_filename)
@@ -120,7 +115,7 @@ def index():
 @app.route("/instagram", methods=["GET", "POST"])
 def instagram_downloader():
     if request.method == "GET":
-        return render_template("instagram_downloader.html")
+        return render_template("instagram_downloader.html")  # This ensures the page opens when accessed
 
     client_ip = request.remote_addr
     if is_rate_limited(client_ip):
@@ -130,11 +125,11 @@ def instagram_downloader():
     if not post_url:
         return jsonify({"error": "No URL provided"}), 400
 
-    filepaths = download_instagram_post(post_url)
-    if filepaths:
-        return send_file(filepaths[0], as_attachment=True, download_name=os.path.basename(filepaths[0]))
+    filepath = download_instagram_post(post_url)
+    if filepath:
+        return send_file(filepath, as_attachment=True, download_name=os.path.basename(filepath))
 
-    return jsonify({"error": "Could not download the Instagram content"}), 500
+    return jsonify({"error": "Could not download the Instagram post"}), 500
 
 @app.route("/video", methods=["POST"])
 def video_downloader():
@@ -153,7 +148,7 @@ def video_downloader():
         return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
 
     return jsonify({"error": "Could not download the video"}), 500
-
+    
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=True)
