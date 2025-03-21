@@ -31,6 +31,4 @@ wsproto==1.2.0
 yt-dlp==2025.2.19
 gunicorn
 webdriver-manager==4.0.1  # Fixed for Linux, avoids pywin32 issue
-ensta
 redis
-moviepy
